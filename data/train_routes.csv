@@ -1,0 +1,105 @@
+"operator","route_id","route_code","route_name","route_en_name","route_color","route_type"
+"TokyoMetro","TokyoMetro.Chiyoda","C","千代田線","Chiyoda Line","00a650",2
+"TokyoMetro","TokyoMetro.Fukutoshin","F","副都心線","Fukutoshin Line","ba6831",2
+"TokyoMetro","TokyoMetro.Ginza","G","銀座線","Ginza Line","f7931d",2
+"TokyoMetro","TokyoMetro.Hanzomon","Z","半蔵門線","Hanzōmon Line","937cb9",2
+"TokyoMetro","TokyoMetro.Hibiya","H","日比谷線","Hibiya Line","8ba2ae",2
+"TokyoMetro","TokyoMetro.Marunouchi","M","丸ノ内線","Marunouchi Line","ed1c24",2
+"TokyoMetro","TokyoMetro.MarunouchiBranch","Mb","丸ノ内線分岐線","Marunouchi Branch Line","ed1c24",2
+"TokyoMetro","TokyoMetro.Namboku","N","南北線","Namboku Line","00b5ad",2
+"TokyoMetro","TokyoMetro.Tozai","T","東西線","Tōzai Line","00b2dd",2
+"TokyoMetro","TokyoMetro.Yurakucho","Y","有楽町線","Yūrakuchō Line","bb8b38",2
+"Toei","Toei.Asakusa","A","浅草線","Asakusa Line","ef5ba1",2
+"Toei","Toei.Mita","I","三田線","Mita Line","0080c6",2
+"Toei","Toei.Oedo","E","大江戸線","Ōedo Line","b51e82",2
+"Toei","Toei.Shinjuku","S","新宿線","Shinjuku Line","6dc067",2
+"Toei","Toei.Arakawa","SA","東京さくらトラム（都電荒川線）","Tokyo Sakura Tram (Arakawa Line)","ee86a7",0
+"Toei","Toei.NipporiToneri","NT","日暮里・舎人ライナー","Nippori-Toneri Liner","58b580",1
+"JR-East","JR-East.ChuoRapid","JC","中央線快速","Chūō Rapid Line","fe642e",2
+"JR-East","JR-East.ChuoSobuLocal","JB","中央・総武緩行線","Chūō-Sōbu Line","ffd700",2
+"JR-East","JR-East.Hachiko",,"八高線","Hachikō Line","9acd32",2
+"JR-East","JR-East.Ito",,"伊東線","Itō Line","ffa500",2
+"JR-East","JR-East.Itsukaichi","JC","五日市線","Itsukaichi Line","ff4500",2
+"JR-East","JR-East.Joban",,"常磐線","Jōban Line","0000ff",2
+"JR-East","JR-East.JobanLocal","JL","常磐線各駅停車","Jōban Local Line","808080",2
+"JR-East","JR-East.JobanRapid","JJ","常磐線快速","Jōban Rapid Line","3cb371",2
+"JR-East","JR-East.Kashima",,"鹿島線","Kashima Line","00ff00",2
+"JR-East","JR-East.Kawagoe",,"川越線","Kawaoge Line","2e8b57",2
+"JR-East","JR-East.KeihinTohokuNegishi","JK","京浜東北線・根岸線","Keihin-Tōhoku/Negishi Line","00bfff",2
+"JR-East","JR-East.Keiyo","JE","京葉線","Keiyō Line","dc143c",2
+"JR-East","JR-East.Kururi",,"久留里線","Kururi Line","00ced1",2
+"JR-East","JR-East.Musashino","JM","武蔵野線","Musashino Line","ff4500",2
+"JR-East","JR-East.Nambu","JN","南武線","Nambu Line","ffff00",2
+"JR-East","JR-East.NambuBranch","JN","南武線浜川崎支線","Nambu Line Hama-Kawasaki Branch","ffff00",2
+"JR-East","JR-East.Narita",,"成田線","Narita Line","2e8b57",2
+"JR-East","JR-East.NaritaAbikoBranch",,"成田線我孫子支線","Narita Line Abiko Branch","2e8b57",2
+"JR-East","JR-East.NaritaAirportBranch",,"成田線空港支線","Narita Line Airport Branch","2e8b57",2
+"JR-East","JR-East.Ome","JC","青梅線","Ōme Line","ff4500",2
+"JR-East","JR-East.Sagami",,"相模線","Sagami Line","339999",2
+"JR-East","JR-East.SaikyoKawagoe","JA","埼京線・川越線","Saikyō/Kawagoe Line","2e8b57",2
+"JR-East","JR-East.ShonanShinjuku","JS","湘南新宿ライン","Shōnan-Shinjuku Line","e21f26",2
+"JR-East","JR-East.Sobu",,"総武線","Sōbu Line","0070b9",2
+"JR-East","JR-East.SobuRapid","JO","総武線快速","Sōbu Rapid Line","0070b9",2
+"JR-East","JR-East.Sotobo",,"外房線","Sotobō Line","ff4500",2
+"JR-East","JR-East.Takasaki","JU","高崎線","Takasaki Line","ffa500",2
+"JR-East","JR-East.Togane",,"東金線","Tōgane Line","ff8c00",2
+"JR-East","JR-East.Tokaido","JT","東海道線","Tōkaidō Line","ffa500",2
+"JR-East","JR-East.Tsurumi","JI","鶴見線","Tsurumi Line","ffd700",2
+"JR-East","JR-East.Uchibo",,"内房線","Uchibō Line","00bf00",2
+"JR-East","JR-East.Utsunomiya","JU","宇都宮線","Utsunomiya Line","ffa500",2
+"JR-East","JR-East.Yamanote","JY","山手線","Yamanote Line","9acd32",2
+"JR-East","JR-East.Yokohama","JH","横浜線","Yokohama Line","9acd32",2
+"JR-East","JR-East.Yokosuka",,"横須賀線","Yokosuka Line","0070b9",2
+"Tobu","Tobu.TobuSkytree","TS","東武スカイツリーライン","Tōbu Skytree Line","005aaa",2
+"Tobu","Tobu.TobuSkytreeBranch","TS","東武スカイツリーライン押上岐線","Tōbu Skytree Line Oshiage Branch","005aaa",2
+"Tobu","Tobu.Kameido","TS","東武亀戸線","Tōbu Kameido Line","005aaa",2
+"Tobu","Tobu.Daishi","TS","東武大師線","Tōbu Daishi Line","005aaa",2
+"Tobu","Tobu.Koizumi","TI","東武小泉線","Tōbu Koizumi Line","dc143c",2
+"Tobu","Tobu.KoizumiBranch","TI","東武小泉線分岐線","Tōbu Koizumi Branch Line","dc143c",2
+"Tobu","Tobu.Iesaki","TI","東武伊勢崎線","Tōbu Isesaki Line","dc143c",2
+"Tobu","Tobu.Kiryu","TI","東武桐生線","Tōbu Kiryū Line","dc143c",2
+"Tobu","Tobu.Sano","TI","東武佐野線","Tōbu Sano Line","dc143c",2
+"Tobu","Tobu.Nikko","TN","東武日光線","Tōbu Nikko Line","ffa500",2
+"Tobu","Tobu.Kinugawa","TN","東武鬼怒川線","Tōbu Kinugawa Line","ffa500",2
+"Tobu","Tobu.Utsunomiya","TN","東武宇都宮線","Tōbu Utsunomiya Line","ffa500",2
+"Tobu","Tobu.Tojo","TJ","東武東上線","Tōbu Tōjō Line","0000cd",2
+"Tobu","Tobu.Ogose","TJ","東武越生線","Tōbu Ogose Line","0000cd",2
+"Tobu","Tobu.TobuUrbanPark","TD","東武アーバンパークライン","Tōbu Urban Park Line","00bfff",2
+"Odakyu","Odakyu.Odawara","OH","小田急小田原線","Odakyū Odawara Line","008dd1",2
+"Odakyu","Odakyu.Enoshima","OE","小田急江ノ島線","Odakyū Enoshima Line","008dd1",2
+"Odakyu","Odakyu.Tama","OT","小田急多摩線","Odakyū Tama Line","008dd1",2
+"Keio","Keio.Inokashira","IN","井の頭線","Inokashira Line","1e90ff",2
+"Keio","Keio.Keio","KO","京王線","Keiō Line","dd0077",2
+"Keio","Keio.KeioNew","KO","京王新線","Keiō New Line","dd0077",2
+"Keio","Keio.Dobutsuen","KO","京王動物園線","Keiō Dōbutsuen Line","dd0077",2
+"Keio","Keio.Keibajo","KO","京王競馬場線","Keiō Keibajō Line","dd0077",2
+"Keio","Keio.Sagamihara","KO","京王相模原線","Keiō Sagamihara Line","dd0077",2
+"Keio","Keio.Takao","KO","京王高尾線","Keiō Takao Line","dd0077",2
+"Seibu","Seibu.Ikebukuro","SI","西武池袋線","Seibu Ikebukuro Line","ff8c00",2
+"Seibu","Seibu.Sayama","SI","西武狭山線","Seibu Sayama Line","ff8c00",2
+"Seibu","Seibu.SeibuChichibu","SI","西武秩父線","Seibu Chichibu Line","ff8c00",2
+"Seibu","Seibu.SeibuYurakucho","SI","西武有楽町線","Seibu Yūrakuchō Line","ff8c00",2
+"Seibu","Seibu.Shinjuku","SS","西武新宿線","Seibu Shinjuku Line","00a6bf",2
+"Seibu","Seibu.Hajima","SS","西武拝島線","Seibu Hajima Line","00a6bf",2
+"Seibu","Seibu.Tamako","ST","西武多摩湖線","Seibu Tamako Line","fdbc00",2
+"Seibu","Seibu.Toshima","ST","西武豊島線","Seibu Toshima Line","fdbc00",2
+"Seibu","Seibu.Kokubunji","SK","西武国分寺線","Seibu Kokubunji Line","00cc66",2
+"Seibu","Seibu.Seibuen","SK","西武園線","Seibu Seibuen Line","00cc66",2
+"Seibu","Seibu.Tamagawa","SW","西武多摩川線","Seibu Tamagawa Line","ef810f",2
+"Seibu","Seibu.Yamaguchi","SY","西武山口線","Seibu Yamaguchi Line","ff3333",2
+"Keikyu","Keikyu.Main","KK","京急本線","Keikyū Main Line","00bfff",2
+"Keikyu","Keikyu.Airport","KK","京急空港線","Keikyū Airport Line","00bfff",2
+"Keikyu","Keikyu.Daishi","KK","京急大師線","Keikyū Daishi Line","00bfff",2
+"Keikyu","Keikyu.Kurihama","KK","京急久里浜線","Keikyū Kurihama Line","00bfff",2
+"Keikyu","Keikyu.Zushi","KK","京急逗子線","Keikyū Zushi Line","00bfff",2
+"Keisei","Keisei.NaritaSkyAccess","KS","京成成田スカイアクセス","Keisei Narita SkyAccess","ff8620",2
+"Keisei","Keisei.Main","KS","京成本線","Keisei Main Line","005aaa",2
+"Keisei","Keisei.Kanamachi","KS","京成金町線","Keisei Kanamachi Line","005aaa",2
+"Keisei","Keisei.Chiba","KS","京成千葉線","Keisei Chiba Line","005aaa",2
+"Keisei","Keisei.Chihara","KS","京成千原線","Keisei Chihara Line","005aaa",2
+"Keisei","Keisei.HigashiNarita","KS","京成東成田線","Keisei Higashi-Narita Line","005aaa",2
+"Keisei","Keisei.Oshiage","KS","京成押上線","Keisei Oshiage Line","005aaa",2
+"TWR","TWR.Rinkai","R","りんかい線","Rinkai Line","00418e",2
+"Yurikamome","Yurikamome.Yurikamome","U","ゆりかもめ","Yurikamome","0085cd",1
+"Shibayama","Shibayama.Shibayama","SR","芝山鉄道線","Shibayama Line","3cb371",2
+"Hokuso","Hokuso.Hokuso","HS","北総線","Hokusō Line","00bfff",2

@@ -1,3 +1,11 @@
+# Tokyo GTFS
+gtfs/*
+ignore*
+broken_stops.csv
+apikey*
+*.zip
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
