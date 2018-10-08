@@ -14,7 +14,6 @@ import re
 import io
 import os
 
-__name__ = "TokyoGTFS_TrainsGTFS"
 __author__ = "Mikołaj Kuranowski"
 __email__ = "mikolaj@mkuran.pl"
 __license__ = "CC BY 4.0"
@@ -23,7 +22,7 @@ GTFS_HEADERS = {
     "agency.txt": ["agency_id", "agency_name", "agency_url", "agency_timezone", "agency_lang"],
     "stops.txt": ["stop_id", "stop_code", "stop_name", "stop_lat", "stop_lon", "zone_id", "location_type", "parent_station"],
     "routes.txt": ["agency_id", "route_id", "route_short_name", "route_long_name", "route_type", "route_color", "route_text_color"],
-    "trips.txt": ["route_id", "trip_id", "service_id", "trip_short_name", "trip_headsign", "direction_id", "direction_name", "block_id"],
+    "trips.txt": ["route_id", "trip_id", "service_id", "trip_short_name", "trip_headsign", "direction_id", "direction_name", "block_id", "train_realtime_id"],
     "stop_times.txt": ["trip_id", "stop_sequence", "stop_id", "platform", "arrival_time", "departure_time"],
     "calendar_dates.txt": ["service_id", "date", "exception_type"],
     #"fare_attributes.txt": ["agency_id", "fare_id", "price", "currency_type", "payment_method", "transfers"],
@@ -426,7 +425,7 @@ class TrainParser:
                 "route_id": route, "trip_id": trip_id, "service_id": service_id,
                 "trip_short_name": trip_short_name, "trip_headsign": trip_headsign,
                 "direction_id": direction_id, "direction_name": direction_name,
-                "block_id": block_id
+                "block_id": block_id, "train_realtime_id": trip.get("odpt:train", "")
             })
 
 

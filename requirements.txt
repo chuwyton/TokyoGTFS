@@ -1,2 +1,5 @@
+gtfs-realtime-bindings >= 0.0.5
 beautifulsoup4
 requests
+iso8601
+pytz

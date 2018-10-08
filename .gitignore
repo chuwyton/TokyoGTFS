@@ -4,6 +4,7 @@ ignore*
 broken_stops.csv
 apikey*
 *.zip
+*.pb
 
 
 # Byte-compiled / optimized / DLL files
