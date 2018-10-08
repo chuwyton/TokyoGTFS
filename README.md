@@ -68,7 +68,7 @@ the tokyo_trains.zip GTFS *will* include data from [© OpenStreetMap contributor
 License
 -------
 
-Tokyo is shared under the [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) license, included in the file *license.md*.
+TokyoGTFS is shared under the [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) license, included in the file *license.md*.
 
 This script may be used for any use as long as alongside the sciprt a contribution is stated, that includes:
 - Author's name: Mikołaj Kuranowski,
