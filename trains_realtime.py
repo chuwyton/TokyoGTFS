@@ -10,10 +10,10 @@ import csv
 import io
 import os
 
-EFFECTS = {"運転見合わせ": 1, "運転被約": 2, "遅延": 3, "運行情報あり": 6}
+EFFECTS = {"運転見合わせ": 1, "運転被約": 2, "遅延": 3, "運行情報あり": 6, "お知らせ": 6, "直通運転中止": 1}
 CAUSES = {
     "車両点検": 9, "車輪空転": 3, "大雨": 8, "大雪": 8, "地震": 6, "線路に支障物": 6, "シカと衝突": 6,
-    "接続待合せ": 3,
+    "接続待合せ": 3, "異音の確認": 3, "架線点検": 3, "踏切に支障物": 6,
 }
 
 class TrainRealtime:
@@ -68,7 +68,7 @@ class TrainRealtime:
             delay = train.get("odpt:delay")
             current_stop = train.get("odpt:fromStation")
             next_stop = train.get("odpt:toStation")
-            route = train["odpt:Railway"].split(":")
+            route = train["odpt:railway"].split(":")[1]
             update_timestamp = round(iso8601.parse_date(train["dc:date"]).timestamp())
 
             # Be sure data is not too old
@@ -124,7 +124,8 @@ class TrainRealtime:
 
 
             # Ignore alerts that denote normal service status
-            if alert.get("odpt:trainInformationStatus", {}).get("ja", "平常") == "平常":
+            if alert.get("odpt:trainInformationStatus") == None or \
+               alert.get("odpt:trainInformationStatus", {}).get("ja", "平常") == "平常":
                 continue
 
             # Ignore alerts for inactive operators and inactive routes

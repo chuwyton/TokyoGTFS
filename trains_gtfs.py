@@ -356,6 +356,7 @@ class TrainParser:
             trip_id = trip["owl:sameAs"].split(":")[1]
             calendar = trip["odpt:calendar"].split(":")[1]
             service_id = route + "/" + calendar
+            train_rt_id = trip["odpt:train"].split(":")[1] if "odpt:train" in trip else ""
 
             if self.verbose: print("\033[1A\033[KParsing times:", trip_id)
 
@@ -425,7 +426,7 @@ class TrainParser:
                 "route_id": route, "trip_id": trip_id, "service_id": service_id,
                 "trip_short_name": trip_short_name, "trip_headsign": trip_headsign,
                 "direction_id": direction_id, "direction_name": direction_name,
-                "block_id": block_id, "train_realtime_id": trip.get("odpt:train", "")
+                "block_id": block_id, "train_realtime_id": train_rt_id
             })
 
 
