@@ -1,14 +1,15 @@
-operator,name,name_en,website
-TokyoMetro,東京メトロ,Tokyo Metro,https://www.tokyometro.jp/
-Toei,東京都交通局,Toei,https://www.kotsu.metro.tokyo.jp/
-JR-East,JR-東日本,JR-East,https://www.jreast.co.jp/
-Tobu,東武鉄道,Tōbu Railway,http://www.tobu.co.jp/
-Odakyu,小田急電鉄,Odakyū Railway,https://www.odakyu.jp/
-Keio,京王電鉄,Keiō Corporation,https://www.keio.co.jp/
-Seibu,西武鉄道,Seibu Railway,https://www.seiburailway.jp/
-Keikyu,京急電鉄,Keikyū Railway,http://www.keikyu.co.jp/
-Keisei,京成電鉄,Keisei Electric Railway,http://www.keisei.co.jp/
-TWR,東京臨海高速鉄道,Tokyo Waterfront Area Rapid Transit,http://www.twr.co.jp/
-Yurikamome,ゆりかもめ,Yurikamome,http://www.yurikamome.co.jp/
-Shibayama,芝山鉄道,Shibayama Railway,http://www.sibatetu.co.jp/
-Hokuso,北総鉄道,Hokusō Railway,https://www.hokuso-railway.co.jp/
+"operator","name","name_en","website","trains","busses"
+"TokyoMetro","東京メトロ","Tokyo Metro","https://www.tokyometro.jp/",1,0
+"Toei","東京都交通局","Tokyo Metropolitan Bureau of Transportation","https://www.kotsu.metro.tokyo.jp/",1,1
+"JR-East","JR-東日本","JR-East","https://www.jreast.co.jp/",1,0
+"Tokyu","東急電鉄","Tōkyū Railway","http://www.tokyu.co.jp/",1,0
+"Tobu","東武鉄道","Tōbu Railway","http://www.tobu.co.jp/",1,0
+"Odakyu","小田急電鉄","Odakyū Railway","https://www.odakyu.jp/",1,0
+"Keio","京王電鉄","Keiō Corporation","https://www.keio.co.jp/",1,0
+"Seibu","西武鉄道","Seibu Railway","https://www.seiburailway.jp/",1,0
+"Keikyu","京急電鉄","Keikyū Railway","http://www.keikyu.co.jp/",1,0
+"Keisei","京成電鉄","Keisei Electric Railway","http://www.keisei.co.jp/",1,0
+"TWR","東京臨海高速鉄道","Tokyo Waterfront Area Rapid Transit","http://www.twr.co.jp/",1,0
+"Yurikamome","ゆりかもめ","Yurikamome","http://www.yurikamome.co.jp/",1,0
+"Shibayama","芝山鉄道","Shibayama Railway","http://www.sibatetu.co.jp/",1,0
+"Hokuso","北総鉄道","Hokusō Railway","https://www.hokuso-railway.co.jp/",1,0

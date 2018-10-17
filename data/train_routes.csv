@@ -50,6 +50,14 @@
 "JR-East","JR-East.Yamanote","JY","山手線","Yamanote Line","9acd32",2
 "JR-East","JR-East.Yokohama","JH","横浜線","Yokohama Line","9acd32",2
 "JR-East","JR-East.Yokosuka",,"横須賀線","Yokosuka Line","0070b9",2
+"Tokyu","Tokyu.Meguro","MG","東急目黒線","Tōkyū Meguro Line","009cd2",2
+"Tokyu","Tokyu.DenEnToshi","DT","東急田園都市線","Tōkyū Den-En-Toshi Line","20a288",2
+"Tokyu","Tokyu.Ikegami","IK","東急池上線","Tōkyū Ikegami Line","ee86a7",2
+"Tokyu","Tokyu.Oimachi","OM","東急大井町線","Tōkyū Ōimachi Line","f18c43",2
+"Tokyu","Tokyu.Setagaya","SG","東急世田谷","Tōkyū Setagaya Line","dcc70d",0
+"Tokyu","Tokyu.TokyuTamagawa","TM","東急多摩川線","Tōkyū Tamagawa Line","ae0378",2
+"Tokyu","Tokyu.Toyoko","TY","東急東横線","Tōkyū Tōyoko Line","da0442",2
+"Tokyu","Tokyu.Kodomonokuni","KD","東急こどもの国線","Tōkyū Kodomonokuni Line","0068b7",2
 "Tobu","Tobu.TobuSkytree","TS","東武スカイツリーライン","Tōbu Skytree Line","005aaa",2
 "Tobu","Tobu.TobuSkytreeBranch","TS","東武スカイツリーライン押上岐線","Tōbu Skytree Line Oshiage Branch","005aaa",2
 "Tobu","Tobu.Kameido","TS","東武亀戸線","Tōbu Kameido Line","005aaa",2
