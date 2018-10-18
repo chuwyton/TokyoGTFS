@@ -6,6 +6,7 @@ from copy import copy
 import argparse
 import requests
 import zipfile
+import ijson
 import json
 import math
 import time
@@ -42,7 +43,7 @@ def _text_color(route_color: str):
     else: return "FFFFFF"
 
 def _holidays(year):
-    request = requests.get("https://www.officeholidays.com/countries/japan/{}.php".format(year), timeout=5)
+    request = requests.get("https://www.officeholidays.com/countries/japan/{}.php".format(year), timeout=30)
     soup = BeautifulSoup(request.text, "html.parser")
     holidays = {datetime.strptime(h.find("time").string, "%Y-%m-%d").date() for h in soup.find_all("tr", class_="holiday")}
     return holidays
@@ -86,7 +87,7 @@ class _Time(object):
             raise ValueError("invalid string for _Time.from_str(), {} (should be HH:MM or HH:MM:SS)".format(string))
 
 class TrainParser:
-    def __init__(self, apikey, use_osm=True, verbose=True):
+    def __init__(self, apikey, use_osm=False, verbose=True):
         self.apikey = apikey
         self.use_osm = use_osm
         self.verbose = verbose
@@ -118,18 +119,20 @@ class TrainParser:
         self.used_calendars = OrderedDict()
 
     def _trainTypes(self):
-        ttypes_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:TrainType.json", params={"acl:consumerKey": self.apikey}, timeout=10)
+        ttypes_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:TrainType.json", params={"acl:consumerKey": self.apikey}, timeout=30, stream=True)
         ttypes_req.raise_for_status()
-        ttypes = ttypes_req.json()
+        ttypes = ijson.items(ttypes_req.raw, "item")
         ttypes_dict = {i["owl:sameAs"]: (i["dc:title"], i.get("odpt:trainTypeTitle", {}).get("en", "")) for i in ttypes}
+        ttypes_req.close()
         return ttypes_dict
 
     def _trainDirections(self):
-        tdirs = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:RailDirection.json", params={"acl:consumerKey": self.apikey}, timeout=10)
-        tdirs.raise_for_status()
-        tdirs = tdirs.json()
+        tdirs_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:RailDirection.json", params={"acl:consumerKey": self.apikey}, timeout=30, stream=True)
+        tdirs_req.raise_for_status()
+        tdirs = ijson.items(tdirs_req.raw, "item")
         tdirs_dict = OrderedDict()
         for i in tdirs: tdirs_dict[i["owl:sameAs"]] = i["dc:title"]
+        tdirs_req.close()
         return tdirs_dict
 
     def _blockid(self, trips):
@@ -148,9 +151,9 @@ class TrainParser:
         return block
 
     def _legal_calendars(self):
-        calendars = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:Calendar.json", params={"acl:consumerKey": self.apikey}, timeout=10)
-        calendars.raise_for_status()
-        calendars = calendars.json()
+        calendars_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:Calendar.json", params={"acl:consumerKey": self.apikey}, timeout=30, stream=True)
+        calendars_req.raise_for_status()
+        calendars = ijson.items(calendars_req.raw, "item")
 
         valid_calendars = set()
         for calendar in calendars:
@@ -167,6 +170,7 @@ class TrainParser:
             else:
                 warn("\033[1mno dates defined for calendar {}\033[0m".format(calendar_id))
 
+        calendars_req.close()
         return valid_calendars
 
     def agencies(self):
@@ -217,9 +221,9 @@ class TrainParser:
     def stops(self):
         """Parse stops"""
         # Get list of stops
-        stops = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:Station.json", params={"acl:consumerKey": self.apikey}, timeout=10)
-        stops.raise_for_status()
-        stops = stops.json()
+        stops_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:Station.json", params={"acl:consumerKey": self.apikey}, timeout=90, stream=True)
+        stops_req.raise_for_status()
+        stops = ijson.items(stops_req.raw, "item")
 
         # Load OSM data
         if self.use_osm:
@@ -236,13 +240,14 @@ class TrainParser:
 
         broken_stops_buff = open("broken_stops.csv", mode="w", encoding="utf8", newline="")
         broken_stops_wrtr = csv.writer(broken_stops_buff)
-        broken_stops_wrtr.writerow(["stop_id", "stop_name", "stop_name_en", "stop_code"])
+        broken_stops_wrtr.writerow(["stop_id", "stop_name", "stop_name_en", "stop_code", "is_in_osm"])
 
         # Iterate over stops
         for stop in stops:
             stop_id = stop["owl:sameAs"].split(":")[1]
             stop_code = stop.get("odpt:stationCode", "").replace("-", "")
             stop_name, stop_name_en = stop["dc:title"], stop.get("odpt:stationTitle", {}).get("en", "")
+            stop_lat, stop_lon = None, None
 
             if self.verbose: print("\033[1A\033[KParsing stops:", stop_id)
 
@@ -272,9 +277,7 @@ class TrainParser:
                 # If a matching station was found, get its lat and lon
                 if found:
                     stop_lat, stop_lon = found[0]["@lat"], found[0]["@lon"]
-
-                else:
-                    stop_lat, stop_lon = None, None
+                    broken_stops_wrtr.writerow([stop_id, stop_name, stop_name_en, stop_code, 1])
 
 
             # Output to GTFS or to incorrect stops
@@ -287,14 +290,15 @@ class TrainParser:
                 })
 
             else:
-                broken_stops_wrtr.writerow([stop_id, stop_name, stop_name_en, stop_code])
+                broken_stops_wrtr.writerow([stop_id, stop_name, stop_name_en, stop_code, 0])
 
+        stops_req.close()
         buffer.close()
 
     def routes(self):
-        routes = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:Railway.json", params={"acl:consumerKey": self.apikey}, timeout=10)
-        routes.raise_for_status()
-        routes = routes.json()
+        routes_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:Railway.json", params={"acl:consumerKey": self.apikey}, timeout=90, stream=True)
+        routes_req.raise_for_status()
+        routes = ijson.items(routes_req.raw, "item")
 
         buffer = open("gtfs/routes.txt", mode="w", encoding="utf8", newline="")
         writer = csv.DictWriter(buffer, GTFS_HEADERS["routes.txt"], extrasaction="ignore")
@@ -326,6 +330,7 @@ class TrainParser:
                 "route_text_color": route_text
             })
 
+        routes_req.close()
         buffer.close()
 
     def trips(self):
@@ -337,9 +342,9 @@ class TrainParser:
         main_direction = ""
 
         # Get all trips
-        trips = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:TrainTimetable.json", params={"acl:consumerKey": self.apikey}, timeout=10)
-        trips.raise_for_status()
-        trips = trips.json()
+        trips_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:TrainTimetable.json", params={"acl:consumerKey": self.apikey}, timeout=90, stream=True)
+        trips_req.raise_for_status()
+        trips = ijson.items(trips_req.raw, "item")
 
         # Open GTFS trips
         buffer_trips = open("gtfs/trips.txt", mode="w", encoding="utf8", newline="")
@@ -464,7 +469,7 @@ class TrainParser:
                     "arrival_time": str(arrival), "departure_time": str(departure)
                 })
 
-
+        trips_req.close()
         buffer_trips.close()
         buffer_times.close()
 
@@ -480,9 +485,9 @@ class TrainParser:
         buffer.close()
 
     def calendars(self):
-        calendars = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:Calendar.json", params={"acl:consumerKey": self.apikey}, timeout=10)
-        calendars.raise_for_status()
-        calendars = calendars.json()
+        calendars_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:Calendar.json", params={"acl:consumerKey": self.apikey}, timeout=30, stream=True)
+        calendars_req.raise_for_status()
+        calendars = ijson.items(calendars_req.raw, "item")
 
         # Get info on specific calendars
         calendar_dates = {}
@@ -549,6 +554,7 @@ class TrainParser:
                         writer.writerow({"service_id": route+"/"+service, "date": working_date.strftime("%Y%m%d"), "exception_type": 1})
                 working_date += timedelta(days=1)
 
+        calendars_req.close()
         buffer.close()
 
     def stops_postprocess(self):
@@ -675,7 +681,7 @@ if __name__ == "__main__":
     args_parser = argparse.ArgumentParser()
     args_parser.add_argument("-a", "--apikey", metavar="YOUR_APIKEY", help="apikey from developer-tokyochallenge.odpt.org")
     args_parser.add_argument("-v", "--verbose", action="store_true", help="use ANSI escape codes to verbose *a lot*")
-    args_parser.add_argument("-no", "--no-osm", action="store_false", help="do NOT use OSM data to fix stations without lat/lon")
+    args_parser.add_argument("-o", "-osm", "--use-osm", action="store_true", help="use OSM data to fix stations without lat/lon")
     args = args_parser.parse_args()
 
     if args.apikey:
@@ -701,7 +707,7 @@ if __name__ == "__main__":
 
 
     print("Initializing parser")
-    parser = TrainParser(apikey=apikey, use_osm=(not args.no_osm), verbose=args.verbose)
+    parser = TrainParser(apikey=apikey, use_osm=args.use_osm, verbose=args.verbose)
 
     print("Starting data parse... This might take some time...")
     parser.parse()

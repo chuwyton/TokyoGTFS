@@ -60,7 +60,7 @@ For inquiries on this script, use the [GitHub's Issues page](https://github.com/
 Produced GTFS and GTFS-Realtime feeds include data from Mikołaj Kuranowski's [TokyoGTFS](https://github.com/MKuranowski/TokyoGTFS/) project, shared under the [CC BY 4.0 license](https://creativecommons.org/licenses/by/4.0/).
 
 
-Also, unless a special command line option is provided (`--no-osm` or `-no`),
+Also, with a special command line option (`--use-osm` or `-osm`),
 the tokyo_trains.zip GTFS *will* include data from [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright/en), licensed under the [Open Data Commons Open Database License](https://opendatacommons.org/licenses/odbl/).
 
 
