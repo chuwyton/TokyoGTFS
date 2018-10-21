@@ -6,7 +6,7 @@ TokyoGTFS
 Descrpition
 -----------
 
-Make GTFS and GTFS-Realtime feeds for Tokyo from data provided by [Open Data Challenge for Public Transportation in Tokyo](https://tokyochallenge.odpt.org/).
+Make GTFS feeds for Tokyo from data provided by [Open Data Challenge for Public Transportation in Tokyo](https://tokyochallenge.odpt.org/).
 
 
 
@@ -31,8 +31,8 @@ TokyoGTFS is written in [Python3](https://python.org) and depends on several ext
 Before launching install those using `pip3 install -r requirements.txt`.
 
 Currently there are 2 scripts available:
-- *trains_gtfs.py*: to create static train data in GTFS format,
-- *trains_realtime.py*: to create dynamic train data in GTFS-Realtime format.
+- *trains_gtfs.py*: to create train schedules in GTFS format,
+- *buses_gtfs.py*: to create bus schedules in GTFS format.
 
 
 
@@ -51,13 +51,13 @@ Attributions
 Use created data according to [API Use Guidelines](https://developer-tokyochallenge.odpt.org/en/terms/api_guideline.html),
 [API Use Permission Rules](https://developer-tokyochallenge.odpt.org/en/terms/terms_api_usage.html), [TokyoGTFS data license](https://github.com/MKuranowski/TokyoGTFS/tree/master/data) and, if appropiate, [OSM copyright](https://www.openstreetmap.org/copyright/en).
 
-The source of data used for creating GTFS and GTFS-Realtime scripts is the Open Data Challenge for Public Transportation in Tokyo.
+The source of data used for GTFS-creating scripts is the Open Data Challenge for Public Transportation in Tokyo.
 They are based on the data provided by the public transportation operators.
 The accuracy and integrity of the data are not guaranteed.
 Please do not contact the public transportation operators directly regarding the content of created GTFS/GTFS-Realtime feeds.
 For inquiries on this script, use the [GitHub's Issues page](https://github.com/MKuranowski/TokyoGTFS/issues/).
 
-Produced GTFS and GTFS-Realtime feeds include data from Mikołaj Kuranowski's [TokyoGTFS](https://github.com/MKuranowski/TokyoGTFS/) project, shared under the [CC BY 4.0 license](https://creativecommons.org/licenses/by/4.0/).
+Produced GTFS feeds include data from Mikołaj Kuranowski's [TokyoGTFS](https://github.com/MKuranowski/TokyoGTFS/) project, shared under the [CC BY 4.0 license](https://creativecommons.org/licenses/by/4.0/).
 
 
 Also, with a special command line option (`--use-osm` or `-osm`),
