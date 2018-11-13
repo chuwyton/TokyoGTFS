@@ -1,5 +1,6 @@
 # Tokyo GTFS
 gtfs/*
+temp/*
 ignore*
 broken_stops.csv
 apikey*
