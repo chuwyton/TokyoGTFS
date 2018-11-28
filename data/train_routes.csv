@@ -64,7 +64,7 @@
 "Tobu","Tobu.Daishi","TS","東武大師線","Tōbu Daishi Line","005aaa",2,0
 "Tobu","Tobu.Koizumi","TI","東武小泉線","Tōbu Koizumi Line","dc143c",2,0
 "Tobu","Tobu.KoizumiBranch","TI","東武小泉線分岐線","Tōbu Koizumi Branch Line","dc143c",2,0
-"Tobu","Tobu.Iesaki","TI","東武伊勢崎線","Tōbu Isesaki Line","dc143c",2,0
+"Tobu","Tobu.Isesaki","TI","東武伊勢崎線","Tōbu Isesaki Line","dc143c",2,0
 "Tobu","Tobu.Kiryu","TI","東武桐生線","Tōbu Kiryū Line","dc143c",2,0
 "Tobu","Tobu.Sano","TI","東武佐野線","Tōbu Sano Line","dc143c",2,0
 "Tobu","Tobu.Nikko","TN","東武日光線","Tōbu Nikko Line","ffa500",2,0
@@ -88,7 +88,7 @@
 "Seibu","Seibu.SeibuChichibu","SI","西武秩父線","Seibu Chichibu Line","ff8c00",2,0
 "Seibu","Seibu.SeibuYurakucho","SI","西武有楽町線","Seibu Yūrakuchō Line","ff8c00",2,0
 "Seibu","Seibu.Shinjuku","SS","西武新宿線","Seibu Shinjuku Line","00a6bf",2,0
-"Seibu","Seibu.Hajima","SS","西武拝島線","Seibu Hajima Line","00a6bf",2,0
+"Seibu","Seibu.Haijima","SS","西武拝島線","Seibu Haijima Line","00a6bf",2,0
 "Seibu","Seibu.Tamako","ST","西武多摩湖線","Seibu Tamako Line","fdbc00",2,0
 "Seibu","Seibu.Toshima","ST","西武豊島線","Seibu Toshima Line","fdbc00",2,0
 "Seibu","Seibu.Kokubunji","SK","西武国分寺線","Seibu Kokubunji Line","00cc66",2,0
