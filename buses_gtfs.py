@@ -26,7 +26,7 @@ GTFS_HEADERS = {
     "agency.txt": ["agency_id", "agency_name", "agency_url", "agency_timezone", "agency_lang"],
     "stops.txt": ["stop_id", "stop_name", "stop_code", "stop_lat", "stop_lon", "zone_id"],
     "routes.txt": ["agency_id", "route_id", "route_short_name", "route_long_name", "route_type", "route_color", "route_text_color"],
-    "trips.txt": ["route_id", "trip_id", "service_id", "trip_headsign"],
+    "trips.txt": ["route_id", "trip_id", "service_id", "trip_headsign", "trip_pattern_id"],
     "stop_times.txt": ["trip_id", "stop_sequence", "stop_id", "arrival_time", "departure_time"],
     "calendar_dates.txt": ["service_id", "date", "exception_type"],
     #"fare_attributes.txt": ["agency_id", "fare_id", "price", "currency_type", "payment_method", "transfers"],
@@ -327,7 +327,7 @@ class BusesParser:
             # Ignore non-parsed routes and non_active calendars
             if operator not in self.operators:
                 continue
-            
+
             if route_id not in self.parsed_routes:
                 warn("\033[1mno route for pattern {}\033[0m".format(pattern_id))
                 continue
@@ -385,7 +385,8 @@ class BusesParser:
             # Write to trips.txt
             writer_trips.writerow({
                 "route_id": route_id, "trip_id": trip_id,
-                "service_id": service_id, "trip_headsign": trip_headsign
+                "service_id": service_id, "trip_headsign": trip_headsign,
+                "trip_pattern_id": pattern_id
             })
 
             # Times
