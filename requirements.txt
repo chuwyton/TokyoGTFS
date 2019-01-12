@@ -1,7 +1,7 @@
-gtfs-realtime-bindings >= 0.0.5
-beautifulsoup4
+ijson
 requests
+html5lib
+beautifulsoup4
 pykakasi
 iso8601
-ijson
-pytz
+gtfs-realtime-bindings >= 0.0.5
