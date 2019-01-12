@@ -1,9 +1,11 @@
 # Tokyo GTFS
 gtfs/*
 temp/*
+ekikara/*
 ignore*
 broken_stops.csv
 apikey*
+*.html
 *.zip
 *.pb
 

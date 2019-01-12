@@ -1,6 +1,7 @@
 gtfs-realtime-bindings >= 0.0.5
 beautifulsoup4
 requests
+pykakasi
 iso8601
 ijson
 pytz

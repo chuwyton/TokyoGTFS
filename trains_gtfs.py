@@ -1,11 +1,14 @@
 from datetime import datetime, date, timedelta
 from collections import OrderedDict
 from bs4 import BeautifulSoup
+from itertools import chain
+from pykakasi import kakasi
 from warnings import warn
 from copy import copy
 import argparse
 import requests
 import zipfile
+import shutil
 import ijson
 import json
 import math
@@ -15,13 +18,22 @@ import re
 import io
 import os
 
+__title__ = "TokyoGTFS: Trains-GTFS"
 __author__ = "Mikołaj Kuranowski"
 __email__ = "mikolaj@mkuran.pl"
 __license__ = "CC BY 4.0"
 
+ADDITIONAL_ENGLISH = {
+    "中荒井": "Nakaarai",
+    "各停": "Local", "特急連絡": "Connecting Limited Express",
+    "私鉄無料急行": "", "無料急行": "", "小田急通勤準急": "",
+    "私鉄無料特急": "Limited Express", "拝島ライナー": "Haijima Liner", "東武ＤＬ": "Tobu DL",
+    "Ｓ−ＴＲＡＩＮ": "S-Train", "シティライナー": "City Liner"
+}
+
 GTFS_HEADERS = {
     "agency.txt": ["agency_id", "agency_name", "agency_url", "agency_timezone", "agency_lang"],
-    "stops.txt": ["stop_id", "stop_code", "stop_name", "stop_lat", "stop_lon", "zone_id", "location_type", "parent_station"],
+    "stops.txt": ["stop_id", "stop_code", "stop_name", "stop_lat", "stop_lon", "location_type", "parent_station"],
     "routes.txt": ["agency_id", "route_id", "route_short_name", "route_long_name", "route_type", "route_color", "route_text_color"],
     "trips.txt": ["route_id", "trip_id", "service_id", "trip_short_name", "trip_headsign", "direction_id", "direction_name", "block_id", "train_realtime_id"],
     "stop_times.txt": ["trip_id", "stop_sequence", "stop_id", "platform", "arrival_time", "departure_time"],
@@ -57,7 +69,77 @@ def _distance(point1, point2):
     d = math.sin(math.radians(dlat) * 0.5) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(math.radians(dlon) * 0.5) ** 2
     return math.asin(math.sqrt(d)) * 12742
 
-class _Time(object):
+def _train_name(names, lang):
+    if type(names) is dict: names = [names]
+    name = "・".join([i[lang] for i in names if i.get(lang)])
+    return name
+
+def _ekikara_type_name(text):
+    text = text.split("(")[0]
+    text = text.replace("私鉄", "").replace("無料", "")
+    text = text.replace("小田急", "")
+    text = text.replace("《", "").replace("》", "")
+    return text
+
+def _clear_dir(dir):
+    if os.path.isdir(dir):
+        for file in os.listdir(dir):
+            filepath = os.path.join(dir, file)
+            if os.path.isdir(filepath): _clear_dir(filepath)
+            else: os.remove(filepath)
+        os.rmdir(dir)
+    elif os.path.isfile(dir):
+        os.remove(dir)
+
+def ekikara_generator():
+    for json_file in os.listdir("ekikara"):
+        with open(os.path.join("ekikara", json_file), mode="r", encoding="utf8") as f:
+            for train in ijson.items(f, "item"): yield train
+
+def trip_generator(apikey, ekikara):
+    # First, the ODPT trips
+    trips_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:TrainTimetable.json", params={"acl:consumerKey": apikey}, timeout=90, stream=True)
+    trips_req.raise_for_status()
+    odpt_trips = ijson.items(trips_req.raw, "item")
+    parsed_trips = set()
+
+    if ekikara: ekikara_trips = ekikara_generator()
+    else: ekikara_trips = []
+
+    for trip in chain(odpt_trips, ekikara_trips):
+        prev_trips = trip.get("odpt:previousTrainTimetable", [])
+        next_trips = trip.get("odpt:nextTrainTimetable", [])
+
+        # Avoid duplicate trips, it sometimes happens
+        if trip["owl:sameAs"] in parsed_trips:
+            continue
+
+        parsed_trips.add(trip["owl:sameAs"])
+
+        if len(prev_trips) > 1:
+            assert len(next_trips) <= 1, "trip {} has multiple previous and multiple next timetables".format(i["owl:sameAs"])
+
+            for suffix, prev_trip_id in enumerate(prev_trips):
+                trip_for_this_train = copy(trip)
+                trip_for_this_train["owl:sameAs"] = trip_for_this_train["owl:sameAs"] + "." + str(suffix + 1)
+                trip_for_this_train["odpt:previousTrainTimetable"] = [prev_trip_id]
+
+                yield trip_for_this_train
+
+        elif len(next_trips) > 1:
+            assert len(prev_trips) <= 1, "trip {} has multiple previous and multiple next timetables".format(i["owl:sameAs"])
+
+            for suffix, next_trip_id in enumerate(next_trips):
+                trip_for_this_train = copy(trip)
+                trip_for_this_train["owl:sameAs"] = trip_for_this_train["owl:sameAs"] + "." + str(suffix + 1)
+                trip_for_this_train["odpt:nextTrainTimetable"] = [next_trip_id]
+
+                yield trip_for_this_train
+
+        else:
+            yield trip
+
+class _Time:
     "Represent a time value"
     def __init__(self, seconds):
         self.m, self.s = divmod(int(seconds), 60)
@@ -67,8 +149,10 @@ class _Time(object):
         "Return GTFS-compliant string representation of time"
         return ":".join(["0" + i if len(i) == 1 else i for i in map(str, [self.h, self.m, self.s])])
 
+    def __repr__(self): return "<Time " + self.__str__() + ">"
     def __int__(self): return self.h * 3600 + self.m * 60 + self.s
     def __add__(self, other): return _Time(self.__int__() + int(other))
+    def __sub__(self, other): return self.__int__() - int(other)
     def __lt__(self, other): return self.__int__() < int(other)
     def __le__(self, other): return self.__int__() <= int(other)
     def __gt__(self, other): return self.__int__() > int(other)
@@ -87,21 +171,34 @@ class _Time(object):
             raise ValueError("invalid string for _Time.from_str(), {} (should be HH:MM or HH:MM:SS)".format(string))
 
 class TrainParser:
-    def __init__(self, apikey, use_osm=False, verbose=True):
+    def __init__(self, apikey, verbose=True, ekikara=False):
         self.apikey = apikey
-        self.use_osm = use_osm
         self.verbose = verbose
-
+        self.ekikara = ekikara
         self.valid_stops = set()
         self.stop_names = {}
+        self.station_positions = {}
+
+        # Block ID stuff
+        self.switch_blocks = {}
         self.blocks = {}
+        self.block_by_joint = {}
         self.block_enum = 0
 
+        # Translations stuff
+        kakasi_loader = kakasi()
+        kakasi_loader.setMode("H", "a")
+        kakasi_loader.setMode("K", "a")
+        kakasi_loader.setMode("J", "a")
+        kakasi_loader.setMode("r", "Hepburn")
+        kakasi_loader.setMode("s", True)
+        kakasi_loader.setMode("C", True)
+        self.kakasi_conv = kakasi_loader.getConverter()
         self.english_strings = {}
 
         # Clean gtfs/ directory
-        if not os.path.exists("gtfs"): os.mkdir("gtfs")
-        for file in os.listdir("gtfs"): os.remove("gtfs/" + file)
+        _clear_dir("gtfs")
+        os.mkdir("gtfs")
 
         # Get info on which routes to parse
         self.operators = []
@@ -109,6 +206,12 @@ class TrainParser:
         with open("data/train_routes.csv", mode="r", encoding="utf8", newline="") as buffer:
             reader = csv.DictReader(buffer)
             for row in reader:
+
+                # Only save info on routes which will have timetables data available:
+                # Those in odpt:TrainTimetable or, if enabled, in ekikara
+                if not (self.ekikara or row["train_timetable_available"] == "1"):
+                    continue
+
                 self.route_data[row["route_id"]] = row
                 if row["operator"] not in self.operators:
                     self.operators.append(row["operator"])
@@ -122,7 +225,13 @@ class TrainParser:
         ttypes_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:TrainType.json", params={"acl:consumerKey": self.apikey}, timeout=30, stream=True)
         ttypes_req.raise_for_status()
         ttypes = ijson.items(ttypes_req.raw, "item")
-        ttypes_dict = {i["owl:sameAs"]: (i["dc:title"], i.get("odpt:trainTypeTitle", {}).get("en", "")) for i in ttypes}
+
+        ttypes_dict = {}
+        for ttype in ttypes:
+            ttypes_dict[ttype["owl:sameAs"].split(":")[1]] = ttype["dc:title"]
+            if ttype.get("odpt:trainTypeTitle", {}).get("en", ""):
+                self.english_strings[ttype["dc:title"]] = ttype.get("odpt:trainTypeTitle", {}).get("en", "")
+
         ttypes_req.close()
         return ttypes_dict
 
@@ -173,6 +282,45 @@ class TrainParser:
         calendars_req.close()
         return valid_calendars
 
+    def _stop_name(self, stop_id):
+        if stop_id in self.stop_names:
+            return self.stop_names[stop_id]
+
+        else:
+            name = re.sub(r"(?!^)([A-Z][a-z]+)", r" \1", stop_id.split(".")[-1])
+            self.stop_names[stop_id] = name
+            warn("\033[1mno name for stop {}\033[0m".format(stop_id))
+            return name
+
+    def _english(self, text):
+        if text in self.english_strings:
+            return self.english_strings[text]
+
+        elif text in ADDITIONAL_ENGLISH:
+            self.english_strings[text] = ADDITIONAL_ENGLISH[text]
+            return ADDITIONAL_ENGLISH[text]
+
+        else:
+            english = self.kakasi_conv.do(text)
+            english = english.title()
+            # Fix for hepburn macrons (Ooki → Ōki)
+            english = english.replace("Uu", "Ū").replace("uu", "ū")
+            english = english.replace("Oo", "Ō").replace("oo", "ō")
+            english = english.replace("Ou", "Ō").replace("ou", "ō")
+
+            # Fix for katakana chōonpu (ta-minaru → tāminaru)
+            english = english.replace("A-", "Ā").replace("a-", "ā")
+            english = english.replace("I-", "Ī").replace("i-", "ī")
+            english = english.replace("U-", "Ū").replace("u-", "ū")
+            english = english.replace("E-", "Ē").replace("e-", "ē")
+            english = english.replace("O-", "Ō").replace("o-", "ō")
+
+            english = english.title()
+
+            self.english_strings[text] = english
+            warn("\033[1mno english for string {} (generated: {})\033[0m".format(text, english))
+            return english
+
     def agencies(self):
         buffer = open("gtfs/agency.txt", mode="w", encoding="utf8", newline="")
         writer = csv.DictWriter(buffer, GTFS_HEADERS["agency.txt"], extrasaction="ignore")
@@ -183,7 +331,7 @@ class TrainParser:
 
         # Iterate over agencies
         for operator in self.operators:
-            # Get data fro moperators.csv
+            # Get data from operators.csv
             operator_data = additional_info.get(operator, {})
             if not operator_data: warn("\033[1mno data defined for operator {}\033[0m".format(operator))
 
@@ -205,18 +353,11 @@ class TrainParser:
         with open(os.path.join("gtfs", "feed_info.txt"), mode="w", encoding="utf8", newline="") as file_buff:
             file_wrtr = csv.writer(file_buff)
             file_wrtr.writerow(["feed_publisher_name", "feed_publisher_url", "feed_lang"])
-            if self.use_osm:
-                file_wrtr.writerow([
-                    "Mikołaj Kuranowski (via TokyoGTFS); Data provders: Open Data Challenge for Public Transportation in Tokyo, © OpenStreetMap contributors (under ODbL license)",
-                    "https://github.com/MKuranowski/TokyoGTFS",
-                    "ja"
-                ])
-            else:
-                file_wrtr.writerow([
-                    "Mikołaj Kuranowski (via TokyoGTFS); Data provided by Open Data Challenge for Public Transportation in Tokyo",
-                    "https://github.com/MKuranowski/TokyoGTFS",
-                    "ja"
-                ])
+            file_wrtr.writerow([
+                "Mikołaj Kuranowski (via TokyoGTFS); Data provided by Open Data Challenge for Public Transportation in Tokyo",
+                "https://github.com/MKuranowski/TokyoGTFS",
+                "ja"
+            ])
 
     def stops(self):
         """Parse stops"""
@@ -226,12 +367,10 @@ class TrainParser:
         stops = ijson.items(stops_req.raw, "item")
 
         # Load OSM data
-        if self.use_osm:
-            with open("data/train_osm_stops.csv", mode="r", encoding="utf8", newline="") as f:
-                osm_data = [i for i in csv.DictReader(f)]
-
-        else:
-            osm_data = []
+        position_fixer = {}
+        with open("data/train_stations_fixes.csv", mode="r", encoding="utf8", newline="") as f:
+            for row in csv.DictReader(f):
+                position_fixer[row["id"]] = (row["lat"], row["lon"])
 
         # Open files
         buffer = open("gtfs/stops.txt", mode="w", encoding="utf8", newline="")
@@ -260,33 +399,16 @@ class TrainParser:
             if stop["odpt:railway"].split(":")[1] not in self.route_data:
                 continue
 
-            # Correct stop position
-            if "geo:lat" in stop and "geo:long" in stop:
-                stop_lat = stop["geo:lat"]
-                stop_lon = stop["geo:long"]
-
-            # No position given, try to get data from OSM
-            elif self.use_osm:
-                # Try to match by ref
-                found = list(filter(lambda i: stop_code in i.get("ref", ""), osm_data)) if stop_code else []
-
-                # If not station was found, try to find by name
-                if not found:
-                    found = list(filter(lambda i: stop_name==i["name"], osm_data))
-
-                # If a matching station was found, get its lat and lon
-                if found:
-                    stop_lat, stop_lon = found[0]["@lat"], found[0]["@lon"]
-                    broken_stops_wrtr.writerow([stop_id, stop_name, stop_name_en, stop_code, 1])
-
+            # Stop Position
+            stop_lat, stop_lon = position_fixer.get(stop_id, (stop.get("geo:lat"), stop.get("geo:long")))
 
             # Output to GTFS or to incorrect stops
             if stop_lat and stop_lon:
                 self.valid_stops.add(stop_id)
+                self.station_positions[stop_id] = (float(stop_lat), float(stop_lon))
                 writer.writerow({
-                    "stop_id": stop_id, "stop_code": stop_code, "zone_id": stop_id,
-                    "stop_name": stop_name, "stop_lat": stop_lat, "stop_lon": stop_lon,
-                    "location_type": 0
+                    "stop_id": stop_id, "stop_code": stop_code, "stop_name": stop_name,
+                    "stop_lat": stop_lat, "stop_lon": stop_lon, "location_type": 0
                 })
 
             else:
@@ -319,6 +441,10 @@ class TrainParser:
             # Translation
             self.english_strings[route_info["route_name"]] = route_info["route_en_name"]
 
+            # Stops
+            self.route_data[route_id]["stops"] = \
+                [stop["odpt:station"].split(":")[1] for stop in sorted(route["odpt:stationOrder"], key=lambda i: i["odpt:index"])]
+
             # Output to GTFS
             writer.writerow({
                 "agency_id": operator,
@@ -336,15 +462,14 @@ class TrainParser:
     def trips(self):
         """Parse trips & stop_times"""
         # Some variables
+        timetable_item_station = lambda i: (i.get("odpt:departureStation") or i.get("odpt:arrivalStation")).split(":")[1]
         train_types = self._trainTypes()
         train_directions = self._trainDirections()
         available_calendars = self._legal_calendars()
         main_direction = ""
 
         # Get all trips
-        trips_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:TrainTimetable.json", params={"acl:consumerKey": self.apikey}, timeout=90, stream=True)
-        trips_req.raise_for_status()
-        trips = ijson.items(trips_req.raw, "item")
+        trips = trip_generator(self.apikey, self.ekikara)
 
         # Open GTFS trips
         buffer_trips = open("gtfs/trips.txt", mode="w", encoding="utf8", newline="")
@@ -357,26 +482,157 @@ class TrainParser:
 
         # Iteratr over trips
         for trip in trips:
-            route = trip["odpt:railway"].split(":")[1]
+            route_id = trip["odpt:railway"].split(":")[1]
             trip_id = trip["owl:sameAs"].split(":")[1]
             calendar = trip["odpt:calendar"].split(":")[1]
-            service_id = route + "/" + calendar
+            service_id = route_id + "/" + calendar
+            block_id = None
             train_rt_id = trip["odpt:train"].split(":")[1] if "odpt:train" in trip else ""
 
             if self.verbose: print("\033[1A\033[KParsing times:", trip_id)
 
             # Ignore ignored routes and non_active calendars
-            if route not in self.route_data or calendar not in available_calendars:
+            if route_id not in self.route_data or calendar not in available_calendars:
                 continue
 
             # Add calendar
-            if route not in self.used_calendars: self.used_calendars[route] = set()
-            self.used_calendars[route].add(calendar)
+            if route_id not in self.used_calendars: self.used_calendars[route_id] = set()
+            self.used_calendars[route_id].add(calendar)
 
-            # Ignore one-stop trips without any previous/next timetables
-            if len(trip["odpt:trainTimetableObject"]) < 2 and \
-            not (trip.get("odpt:previousTrainTimetable", []) or trip.get("odpt:nextTrainTimetable", [])):
+            ### BLOCK_ID ###
+
+            # Origin
+            if "tokyogtfs:originStationName" in trip:
+                origin_station = trip["tokyogtfs:originStationName"]
+
+            elif "odpt:originStation" in trip:
+                origin_station = self._stop_name(trip["odpt:originStation"][-1].split(":")[1])
+
+            else:
+                origin_station = self._stop_name(timetable_item_station(trip["odpt:trainTimetableObject"][0]))
+
+            first_station = self._stop_name(timetable_item_station(trip["odpt:trainTimetableObject"][0]))
+
+            # Destination
+            if "tokyogtfs:destinationStationName" in trip:
+                destination_station = trip["tokyogtfs:destinationStationName"]
+
+            elif "odpt:destinationStation" in trip:
+                destination_station = self._stop_name(trip["odpt:destinationStation"][-1].split(":")[1])
+
+            else:
+                destination_station = self._stop_name(timetable_item_station(trip["odpt:trainTimetableObject"][-1]))
+
+            last_station = self._stop_name(timetable_item_station(trip["odpt:trainTimetableObject"][-1]))
+
+            # Train belongs to a block - get the block_id
+            if origin_station != first_station or destination_station != last_station:
+                first_arr = trip["odpt:trainTimetableObject"][0].get("odpt:arrivalTime", "") or \
+                            trip["odpt:trainTimetableObject"][0].get("odpt:departureTime", "")
+                first_dep = trip["odpt:trainTimetableObject"][0].get("odpt:departureTime", "") or \
+                            trip["odpt:trainTimetableObject"][0].get("odpt:arrivalTime", "")
+
+                last_arr = trip["odpt:trainTimetableObject"][-1].get("odpt:arrivalTime", "") or \
+                            trip["odpt:trainTimetableObject"][-1].get("odpt:departureTime", "")
+                last_dep = trip["odpt:trainTimetableObject"][-1].get("odpt:departureTime", "") or \
+                            trip["odpt:trainTimetableObject"][-1].get("odpt:arrivalTime", "")
+
+                # Train timetable based block_id
+                all_trips = trip.get("odpt:previousTrainTimetable", []) + [trip["owl:sameAs"]] + trip.get("odpt:nextTrainTimetable", [])
+                if len(all_trips) > 1:
+                    block_id = self._blockid(all_trips)
+
+                # Joint-station based block_id
+                block_calendar = "Weekday" if calendar == "Weekday" else "SaturdayHoliday"
+
+                if block_calendar not in self.block_by_joint:
+                    self.block_by_joint[block_calendar] = {}
+
+                # Previous part
+                if first_station not in self.block_by_joint[block_calendar]:
+                    self.block_by_joint[block_calendar][first_station] = {}
+
+                if (origin_station, destination_station) not in self.block_by_joint[block_calendar][first_station]:
+                    self.block_by_joint[block_calendar][first_station][(origin_station, destination_station)] = {}
+
+                for (arr, dep), block in self.block_by_joint[block_calendar][first_station][(origin_station, destination_station)].items():
+                    if (arr != "" and arr == first_arr) or (dep != "" and dep == first_dep):
+                        if block_id is None:
+                            block_id = block
+                        else:
+                            self.switch_blocks[block] = block_id
+                            self.block_by_joint[block_calendar][first_station][(origin_station, destination_station)][(arr, dep)] = block_id
+                        break
+
+                # Next part
+                if last_station not in self.block_by_joint[block_calendar]:
+                    self.block_by_joint[block_calendar][last_station] = {}
+
+                if (origin_station, destination_station) not in self.block_by_joint[block_calendar][last_station]:
+                    self.block_by_joint[block_calendar][last_station][(origin_station, destination_station)] = {}
+
+                for (arr, dep), block in self.block_by_joint[block_calendar][last_station][(origin_station, destination_station)].items():
+                    if (arr != "" and arr == last_arr) or (dep != "" and dep == last_dep):
+                        if block_id is None:
+                            block_id = block
+                        else:
+                            self.switch_blocks[block] = block_id
+                            self.block_by_joint[block_calendar][last_station][(origin_station, destination_station)][(arr, dep)] = block_id
+                        break
+
+                # Still no block_id? That's sad (´・＿・`)
+                if block_id is None:
+                    self.block_enum += 1
+                    block_id = str(self.block_enum)
+
+                # Write block_id info to self.block_by_joint
+                self.block_by_joint[block_calendar][first_station][(origin_station, destination_station)][(first_arr, first_dep)] = block_id
+                self.block_by_joint[block_calendar][last_station][(origin_station, destination_station)][(last_arr, last_dep)] = block_id
+
+            else:
+                block_id = ""
+
+            # Ignore one-stop that are not part of a block
+            if len(trip["odpt:trainTimetableObject"]) < 2 and block_id == "":
                 continue
+
+            ### TEXT INFO ###_ekikara_type_name
+
+            # Train Direction
+            if route_id == "TokyoMetro.Chiyoda":
+                # Chiyoda line — special case.
+                # This line is really 2 lines: YoyogiUehara↔Ayase and Ayase↔KitaAyase
+                # This makes 3 directions in the ODPT data: YoyogiUehara, Ayase and KitaAyase
+
+                stations_of_trip = [timetable_item_station(i) for i in trip["odpt:trainTimetableObject"]]
+
+                if trip["odpt:railDirection"] == "odpt.RailDirection:TokyoMetro.YoyogiUehara":
+                    # Ayase → YoyogiUehara
+                    direction_id, direction_name = "0", train_directions.get(trip["odpt:railDirection"], "")
+
+                elif trip["odpt:railDirection"] == "odpt.RailDirection:TokyoMetro.KitaAyase":
+                    # Ayase → KitaAyase
+                    direction_id, direction_name = "1", train_directions.get(trip["odpt:railDirection"], "")
+
+                elif trip["odpt:railDirection"] == "odpt.RailDirection:TokyoMetro.Ayase" and \
+                                            "TokyoMetro.Chiyoda.KitaAyase" in stations_of_trip:
+                    # KitaAyase → Ayase
+                    direction_id, direction_name = "0", train_directions.get(trip["odpt:railDirection"], "")
+
+                elif trip["odpt:railDirection"] == "odpt.RailDirection:TokyoMetro.Ayase":
+                    # YoyogiUehara → Ayase
+                    direction_id, direction_name = "1", train_directions.get(trip["odpt:railDirection"], "")
+
+                else:
+                    raise ValueError("error while resolving directions of TokyoMetro.Chiyoda line train {}. please report this issue on GitHub.".format(trip_id))
+
+            elif "odpt:railDirection" in trip:
+                if not main_direction: main_direction = trip["odpt:railDirection"]
+                direction_name = train_directions.get(trip["odpt:railDirection"], "")
+                direction_id = 0 if trip["odpt:railDirection"] == main_direction else 1
+
+            else:
+                direction_id, direction_name == "", ""
 
             # Train name
             trip_short_name = trip["odpt:trainNumber"]
@@ -386,49 +642,54 @@ class TrainParser:
                 if trip.get("odpt:trainName", {}).get("en", ""):
                     self.english_strings[trip_short_name] = '{} "{}"'.format(trip["odpt:trainNumber"], trip["odpt:trainName"]["en"])
 
-            # Train Direction
-            if "odpt:railDirection" in trip:
-                if not main_direction: main_direction = trip["odpt:railDirection"]
-                direction_name = train_directions.get(trip["odpt:railDirection"], "")
-                direction_id = 0 if trip["odpt:railDirection"] == main_direction else 1
+            # Headsign
+            if route_id == "JR-East.Yamanote":
+                # Special case - JR-East.Yamanote line
+                # Here, we include the direction_name, as it's important to users (it's)
+                destination_station_en = self._english(destination_station)
+                if direction_name == "内回り" and trip.get("odpt:nextTrainTimetable", []) == []:
+                    trip_headsign = "内回り・{}".format(destination_station)
+                    trip_headsign_en = "Inner Loop (Counter-clockwise): {}".format(destination_station_en)
+
+                if direction_name == "外回り" and trip.get("odpt:nextTrainTimetable", []) == []:
+                    trip_headsign = "外回り・{}".format(destination_station)
+                    trip_headsign_en = "Outer Loop (Clockwise): {}".format(destination_station_en)
+
+                elif direction_name == "内回り":
+                    trip_headsign = "内回り"
+                    trip_headsign_en = "Inner Loop (Counter-clockwise)"
+
+                elif direction_name == "外回り":
+                    trip_headsign = "外回り"
+                    trip_headsign_en = "Outer Loop (Clockwise)"
+
+                else:
+                    raise ValueError("error while creating headsign of JR-East.Yamanote line train {}. please report this issue on GitHub.".format(trip_id))
 
             else:
-                direction_id, direction_name == "", ""
+                trip_headsign = destination_station
+                trip_headsign_en = self._english(destination_station)
 
-            # Train headsign
-            if "odpt:destinationStation" in trip:
-                last_stop_id = trip["odpt:destinationStation"][-1].split(":")[1]
+                if "tokyogtfs:trainTypeName" in trip:
+                    trip_type = _ekikara_type_name(trip["tokyogtfs:trainTypeName"])
+                    trip_type_en = self._english(trip_type)
 
-            else:
-                last_stop_id = (trip["odpt:trainTimetableObject"][-1].get("odpt:arrivalStation", "") or \
-                                trip["odpt:trainTimetableObject"][-1].get("odpt:departureStation", "")).split(":")[1]
+                else:
+                    trip_type, trip_type_en = train_types.get(trip.get("odpt:trainType", ""), ("", ""))
 
-            if last_stop_id in self.stop_names:
-                trip_headsign = self.stop_names[last_stop_id]
-            else:
-                trip_headsign = re.sub(r"(?!^)([A-Z][a-z]+)", r" \1", last_stop_id.split(".")[-1])
-                warn("\033[1mno name for stop {}\033[0m".format(last_stop_id))
-                self.stop_names[last_stop_id] = trip_headsign
+                if trip_type:
+                    trip_headsign = "（{}）{}".format(trip_type, destination_station)
+                    if trip_headsign_en and trip_type_en:
+                        trip_headsign_en = "({}) {}".format(trip_type_en, trip_headsign_en)
+                    else:
+                        trip_headsign_en = None
 
-            trip_headsign_en = self.english_strings.get(trip_headsign, "")
-
-            trip_type, trip_type_en = train_types.get(trip.get("odpt:trainType", ""), ("", ""))
-            if trip_type:
-                trip_headsign = "（{}）{}".format(trip_type, trip_headsign)
-                if trip_headsign_en and trip_type_en:
-                    self.english_strings[trip_headsign] = "({}) {}".format(trip_type_en, trip_headsign_en)
-
-            # Block ID
-            all_trips = trip.get("odpt:previousTrainTimetable", []) + [trip["owl:sameAs"]] + trip.get("odpt:nextTrainTimetable", [])
-            if len(all_trips) > 1:
-                block_id = self._blockid(all_trips)
-
-            else:
-                block_id = ""
+            if trip_headsign_en is not None:
+                self.english_strings[trip_headsign_en] = trip_headsign_en
 
             # Write to trips.txt
             writer_trips.writerow({
-                "route_id": route, "trip_id": trip_id, "service_id": service_id,
+                "route_id": route_id, "trip_id": trip_id, "service_id": service_id,
                 "trip_short_name": trip_short_name, "trip_headsign": trip_headsign,
                 "direction_id": direction_id, "direction_name": direction_name,
                 "block_id": block_id, "train_realtime_id": train_rt_id
@@ -438,12 +699,8 @@ class TrainParser:
             # Times
             prev_departure = _Time(0)
             for idx, stop_time in enumerate(trip["odpt:trainTimetableObject"]):
-                stop_id = stop_time.get("odpt:departureStation") or stop_time.get("odpt:arrivalStation")
+                stop_id = timetable_item_station(stop_time)
                 platform = stop_time.get("odpt:platformNumber", "")
-
-                # Be sure stop_id exist
-                if stop_id: stop_id = stop_id.split(":")[1]
-                else: continue
 
                 if stop_id not in self.valid_stops:
                     warn("\033[1mreference to a non-existing stop, {}\033[0m".format(stop_id))
@@ -459,7 +716,7 @@ class TrainParser:
                 # Be sure arrival and departure exist
                 if not (arrival and departure): continue
 
-                # Fix for after-midnight trips. GTFS requires "24:23", while JSON data contains "00:23"
+                # Fix for after-midnight trips. GTFS requires "24:23", while ODPT data contains "00:23"
                 if arrival < prev_departure: arrival += 86400
                 if departure < arrival: departure += 86400
                 prev_departure = copy(departure)
@@ -469,7 +726,6 @@ class TrainParser:
                     "arrival_time": str(arrival), "departure_time": str(departure)
                 })
 
-        trips_req.close()
         buffer_trips.close()
         buffer_times.close()
 
@@ -581,6 +837,15 @@ class TrainParser:
                     stops[stop_id_wsuffix] = []
                     close_enough = True
 
+                # Special case for stations with the same name that are pretty close, but shouldn't be merged anyway
+                elif stop_name_id in {"Asakusa", "Waseda"}:
+                    # TX Asakusa & SakuraTram Waseda stations should have a different merge group
+                    if [i["id"] for i in stops[stop_id_wsuffix] if i["id"] == "MIR.TsukubaExpress.Asakusa"]:
+                        close_enough = False
+
+                    elif [i["id"] for i in stops[stop_id_wsuffix] if i["id"] == "Toei.Arakawa.Waseda"]:
+                        close_enough = False
+
                 # If there is; check distance between current stop and other stop in such merge group
                 else:
                     saved_location = stops[stop_id_wsuffix][0]["lat"], stops[stop_id_wsuffix][0]["lon"]
@@ -607,7 +872,7 @@ class TrainParser:
             # If there's only 1 entry for a station in API: just write it to stops.txt
             if len(merge_group_stops) == 1:
                 writer.writerow({
-                    "stop_id": merge_group_stops[0]["id"], "zone_id": merge_group_stops[0]["id"],
+                    "stop_id": merge_group_stops[0]["id"],
                     "stop_code": merge_group_stops[0]["code"], "stop_name": names[merge_group_id.split(".")[0]],
                     "stop_lat": merge_group_stops[0]["lat"], "stop_lon": merge_group_stops[0]["lon"]
                 })
@@ -623,7 +888,7 @@ class TrainParser:
                 codes = "/".join([i["code"] for i in merge_group_stops if i["code"]])
 
                 writer.writerow({
-                    "stop_id": station_id, "zone_id": "",
+                    "stop_id": station_id,
                     "stop_code": codes, "stop_name": station_name,
                     "stop_lat": station_lat, "stop_lon": station_lon,
                     "location_type": 1, "parent_station": ""
@@ -632,13 +897,36 @@ class TrainParser:
                 # Dump info about each stop
                 for stop in merge_group_stops:
                     writer.writerow({
-                        "stop_id": stop["id"], "zone_id": stop["id"],
+                        "stop_id": stop["id"],
                         "stop_code": stop["code"], "stop_name": station_name,
                         "stop_lat": stop["lat"], "stop_lon": stop["lon"],
                         "location_type": 0, "parent_station": station_id
                     })
 
         buffer.close()
+
+    def trips_postprocesss(self):
+        os.rename("gtfs/trips.txt", "gtfs/trips.txt.old")
+
+        # Old file
+        in_buffer = open("gtfs/trips.txt.old", mode="r", encoding="utf8", newline="")
+        reader = csv.DictReader(in_buffer)
+
+        # New file
+        out_buffer = open("gtfs/trips.txt", mode="w", encoding="utf8", newline="")
+        writer = csv.DictWriter(out_buffer, GTFS_HEADERS["trips.txt"], extrasaction="ignore")
+        writer.writeheader()
+
+        for row in reader:
+            if row["block_id"] in self.switch_blocks:
+                row["block_id"] = self.switch_blocks[row["block_id"]]
+
+            writer.writerow(row)
+
+        in_buffer.close()
+        out_buffer.close()
+
+        os.remove("gtfs/trips.txt.old")
 
     def parse(self):
         if self.verbose: print("Parsing agencies")
@@ -667,6 +955,9 @@ class TrainParser:
         if self.verbose: print("\033[1A\033[KPost-processing stops")
         self.stops_postprocess()
 
+        if self.verbose: print("\033[1A\033[KPost-processing trips")
+        self.trips_postprocesss()
+
         if self.verbose: print("\033[1A\033[KParsing finished!")
 
     def compress(self):
@@ -680,10 +971,12 @@ class TrainParser:
 if __name__ == "__main__":
     args_parser = argparse.ArgumentParser()
     args_parser.add_argument("-a", "--apikey", metavar="YOUR_APIKEY", help="apikey from developer-tokyochallenge.odpt.org")
-    args_parser.add_argument("-v", "--verbose", action="store_true", help="use ANSI escape codes to verbose *a lot*")
-    args_parser.add_argument("-o", "-osm", "--use-osm", action="store_true", help="use OSM data to fix stations without lat/lon")
+    args_parser.add_argument("--ekikara", action="store_true", help="use ekiakra-based data to create the GTFS")
+    args_parser.add_argument("--local-ekikara", action="store_true", help="use ekiakra-based data to create the GTFS, but don't download it — use whatever is inside ekikara/ subdirectory")
+    args_parser.add_argument("--no-verbose", action="store_false", default=True, dest="verbose", help="don't verbose")
     args = args_parser.parse_args()
 
+    # Apikey checks
     if args.apikey:
         apikey = args.apikey
 
@@ -695,19 +988,23 @@ if __name__ == "__main__":
         raise RuntimeError("No apikey!\n              Provide it inside command line argument '--apikey',\n              Or put it inside a file named 'apikey.txt'.")
 
     start_time = time.time()
-    print("""
-    |  _____     _                 ____ _____ _____ ____   |
-    | |_   _|__ | | ___   _  ___  / ___|_   _|  ___/ ___|  |
-    |   | |/ _ \| |/ / | | |/ _ \| |  _  | | | |_  \___ \  |
-    |   | | (_) |   <| |_| | (_) | |_| | | | |  _|  ___) | |
-    |   |_|\___/|_|\_\\\\__, |\___/ \____| |_| |_|   |____/  |
-    |                 |___/                                |
+    print(r"""
+|  _____     _                 ____ _____ _____ ____   |
+| |_   _|__ | | ___   _  ___  / ___|_   _|  ___/ ___|  |
+|   | |/ _ \| |/ / | | |/ _ \| |  _  | | | |_  \___ \  |
+|   | | (_) |   <| |_| | (_) | |_| | | | |  _|  ___) | |
+|   |_|\___/|_|\_\\__, |\___/ \____| |_| |_|   |____/  |
+|                 |___/                                |
     """)
     print("=== Trains GTFS: Starting! ===")
 
+    if args.ekikara:
+        print("Downloading ekikara data, this *will* take a few hours")
+        import trains_ekikara
+        trains_ekikara.main(args.apikey, args.verbose)
 
     print("Initializing parser")
-    parser = TrainParser(apikey=apikey, use_osm=args.use_osm, verbose=args.verbose)
+    parser = TrainParser(apikey=apikey, verbose=args.verbose, ekikara=(args.ekikara or args.local_ekikara))
 
     print("Starting data parse... This might take some time...")
     parser.parse()
