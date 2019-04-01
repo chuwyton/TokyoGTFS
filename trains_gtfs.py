@@ -45,6 +45,8 @@ GTFS_HEADERS = {
 
 BUILT_IN_CALENDARS = {"Weekday", "SaturdayHoliday", "Holiday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 
+DEBUG_DONT_FIX_STOPS = True
+
 def _text_color(route_color: str):
     """Calculate if route_text_color should be white or black"""
     # This isn't perfect, but works for what we're doing
@@ -308,11 +310,11 @@ class TrainParser:
             english = english.replace("Oo", "Ō").replace("oo", "ō")
             english = english.replace("Ou", "Ō").replace("ou", "ō")
 
-            # Fix for katakana chōonpu (ta-minaru → tāminaru)
-            english = english.replace("A-", "Ā").replace("a-", "ā")
-            english = english.replace("I-", "Ī").replace("i-", "ī")
+            # Fix for katakana chōonpu (ta-minaru → taaminaru)
+            english = english.replace("A-", "Aa").replace("a-", "aa")
+            english = english.replace("I-", "Ii").replace("i-", "ii")
             english = english.replace("U-", "Ū").replace("u-", "ū")
-            english = english.replace("E-", "Ē").replace("e-", "ē")
+            english = english.replace("E-", "Ee").replace("e-", "ee")
             english = english.replace("O-", "Ō").replace("o-", "ō")
 
             english = english.title()
@@ -368,9 +370,11 @@ class TrainParser:
 
         # Load OSM data
         position_fixer = {}
-        with open("data/train_stations_fixes.csv", mode="r", encoding="utf8", newline="") as f:
-            for row in csv.DictReader(f):
-                position_fixer[row["id"]] = (row["lat"], row["lon"])
+
+        if not DEBUG_DONT_FIX_STOPS:
+            with open("data/train_stations_fixes.csv", mode="r", encoding="utf8", newline="") as f:
+                for row in csv.DictReader(f):
+                    position_fixer[row["id"]] = (row["lat"], row["lon"])
 
         # Open files
         buffer = open("gtfs/stops.txt", mode="w", encoding="utf8", newline="")
@@ -636,11 +640,20 @@ class TrainParser:
 
             # Train name
             trip_short_name = trip["odpt:trainNumber"]
-            train_name = trip.get("odpt:trainName", {}).get("ja", "")
+            train_names = trip.get("odpt:trainName", {})
+
+            if type(train_names) is list:
+                train_name = train_names[0].get("ja", "")
+                train_name_en = train_names[0].get("en", "")
+
+            else:
+                train_name = train_names.get("ja", "")
+                train_name_en = train_names.get("en", "")
+
             if train_name:
                 trip_short_name = "{}「{}」".format(trip_short_name, train_name)
-                if trip.get("odpt:trainName", {}).get("en", ""):
-                    self.english_strings[trip_short_name] = '{} "{}"'.format(trip["odpt:trainNumber"], trip["odpt:trainName"]["en"])
+                if train_name_en:
+                    self.english_strings[trip_short_name] = '{} "{}"'.format(trip["odpt:trainNumber"], train_name_en)
 
             # Headsign
             if route_id == "JR-East.Yamanote":
