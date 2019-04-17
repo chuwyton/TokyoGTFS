@@ -6,7 +6,7 @@ TokyoGTFS
 Descrpition
 -----------
 
-Make GTFS feeds for Tokyo from data provided by [Open Data Challenge for Public Transportation in Tokyo](https://tokyochallenge.odpt.org/).
+Make GTFS and GTFS-Realtime feeds for Tokyo from data provided by [Open Data Challenge for Public Transportation in Tokyo](https://tokyochallenge.odpt.org/).
 
 
 
@@ -33,10 +33,11 @@ TokyoGTFS is written in [Python3](https://python.org) and depends on several ext
 
 Before launching install those using `pip3 install -r requirements.txt`.
 
-Currently there are 3 scripts available:
+Currently there are 4 scripts available:
 - *trains_gtfs.py*: to create train schedules in GTFS format,
 - *trains_ekikara.py*: to load timetables for trains without odpt:TrainTimetable data available.  
   This file isn't meant to be run standalone, its functions are incoroporated with *trains_gtfs.py* script.
+- *trains_realtime.py*: to create GTFS-Realtime feed for trains, based on GTFS feed created by *trains_gtfs.py*.
 - *buses_gtfs.py*: to create bus schedules in GTFS format.
 
 

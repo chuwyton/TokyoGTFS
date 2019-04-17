@@ -8,6 +8,11 @@ import csv
 import re
 import os
 
+__title__ = "TokyoGTFS: Trains-Ekikara"
+__author__ = "Mikołaj Kuranowski"
+__email__ = "mikolaj@mkuran.pl"
+__license__ = "CC BY 4.0"
+
 EKIKARA_ROUTES = OrderedDict([
     ("Keisei.Main", "1302011"),
     ("Keisei.Kanamachi", "1302031"),
