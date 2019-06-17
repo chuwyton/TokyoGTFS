@@ -1,6 +1,6 @@
 operator,color,route_timetables_available
-Toei,5da762,0
-JRBusKanto,3163ff,1
+Toei,5da762,1
+JRBusKanto,3163ff,0
 KeioBus,00377e,1
 KokusaiKogyoBus,7ce126,1
 OdakyuBus,da1100,1

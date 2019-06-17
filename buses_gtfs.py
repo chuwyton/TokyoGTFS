@@ -18,6 +18,7 @@ import re
 import io
 import os
 
+__title__ = "TokyoGTFS: Buses-GTFS"
 __author__ = "Mikołaj Kuranowski"
 __email__ = "mikolaj@mkuran.pl"
 __license__ = "CC BY 4.0"
@@ -26,8 +27,8 @@ GTFS_HEADERS = {
     "agency.txt": ["agency_id", "agency_name", "agency_url", "agency_timezone", "agency_lang"],
     "stops.txt": ["stop_id", "stop_name", "stop_code", "stop_lat", "stop_lon", "zone_id"],
     "routes.txt": ["agency_id", "route_id", "route_short_name", "route_long_name", "route_type", "route_color", "route_text_color"],
-    "trips.txt": ["route_id", "trip_id", "service_id", "trip_headsign", "trip_pattern_id"],
-    "stop_times.txt": ["trip_id", "stop_sequence", "stop_id", "arrival_time", "departure_time"],
+    "trips.txt": ["route_id", "trip_id", "service_id", "trip_headsign", "trip_pattern_id", "wheelchair_accessible"],
+    "stop_times.txt": ["trip_id", "stop_sequence", "stop_id", "arrival_time", "departure_time", "pickup_type", "drop_off_type"],
     "calendar_dates.txt": ["service_id", "date", "exception_type"],
     #"fare_attributes.txt": ["agency_id", "fare_id", "price", "currency_type", "payment_method", "transfers"],
     #"fare_rules.txt": ["fare_id", "contains_id"],
@@ -51,7 +52,7 @@ def _holidays(year):
     holidays = {datetime.strptime(h.find("time").string, "%Y-%m-%d").date() for h in soup.find_all("tr", class_="holiday")}
     return holidays
 
-class _Time(object):
+class _Time:
     "Represent a time value"
     def __init__(self, seconds):
         self.m, self.s = divmod(int(seconds), 60)
@@ -61,8 +62,10 @@ class _Time(object):
         "Return GTFS-compliant string representation of time"
         return ":".join(["0" + i if len(i) == 1 else i for i in map(str, [self.h, self.m, self.s])])
 
+    def __repr__(self): return "<Time " + self.__str__() + ">"
     def __int__(self): return self.h * 3600 + self.m * 60 + self.s
     def __add__(self, other): return _Time(self.__int__() + int(other))
+    def __sub__(self, other): return self.__int__() - int(other)
     def __lt__(self, other): return self.__int__() < int(other)
     def __le__(self, other): return self.__int__() <= int(other)
     def __gt__(self, other): return self.__int__() > int(other)
@@ -98,9 +101,10 @@ class BusesParser:
 
         # Get info on which routes to parse
         self.operators = OrderedDict()
-        with open("data/bus_colors.csv", mode="r", encoding="utf8", newline="") as buffer:
+        with open("data/bus_data.csv", mode="r", encoding="utf8", newline="") as buffer:
             reader = csv.DictReader(buffer)
             for row in reader:
+                if row["route_timetables_available"] != "1": continue # Ignores agencies without BusTimetables
                 self.operators[row["operator"]] = (row["color"].upper(), _text_color(row["color"]))
 
         # Calendars
@@ -120,7 +124,7 @@ class BusesParser:
             if calendar_id in BUILT_IN_CALENDARS:
                 valid_calendars.add(calendar_id)
 
-            elif "odpt:day" in calendar:
+            elif "odpt:day" in calendar and calendar["odpt:day"] != []:
                 dates = [datetime.strptime(i, "%Y-%m-%d").date() for i in calendar["odpt:day"]]
                 if min(dates) <= self.enddate and max(dates) >= self.startdate:
                     valid_calendars.add(calendar_id)
@@ -205,7 +209,7 @@ class BusesParser:
             else:
                 operators = [stop["odpt:operator"].split(":")[1]]
 
-            # Ignore stops that belong to ignored routes
+            # Ignore stops that belong to ignored agencies
             if not set(operators).intersection(self.operators):
                 continue
 
@@ -251,7 +255,6 @@ class BusesParser:
             # Get route_id
             if "odpt:busroute" in pattern:
                 route_id = pattern["odpt:busroute"].split(":")[1]
-                self.pattern_map[pattern_id] = route_id
 
             else:
                 if operator == "JRBusKanto":
@@ -262,8 +265,11 @@ class BusesParser:
                 else:
                     route_id = operator + "." + pattern_id.split(".")[1]
 
+            # Map pattern → route_id, as BusTimetable references patterns instead of routes
+            self.pattern_map[pattern_id] = route_id
+
             # Get color from bus_colors.csv
-            route_code = pattern["dc:title"]
+            route_code = pattern["dc:title"].split(" ")[0] # Toei appends direction to BusroutePattern's dc:title
             route_color, route_text = self.operators[operator]
 
             # Output to GTFS
@@ -339,12 +345,12 @@ class BusesParser:
             if route_id not in self.used_calendars: self.used_calendars[route_id] = set()
             self.used_calendars[route_id].add(calendar)
 
-            # Ignore one-stop trips without any previous/next timetables
+            # Ignore one-stop trips
             if len(trip["odpt:busTimetableObject"]) < 2:
                 continue
 
             # Bus headsign
-            headsigns = [i["odpt:destinationSign"] for i in trip["odpt:busTimetableObject"] if "odpt:destinationSign" in i]
+            headsigns = [i["odpt:destinationSign"] for i in trip["odpt:busTimetableObject"] if i.get("odpt:destinationSign") != None]
 
             if headsigns:
                 trip_headsign = headsigns[0]
@@ -362,19 +368,29 @@ class BusesParser:
 
             trip_headsign_en = self.english_strings.get(trip_headsign, "")
 
+            # Non-step bus (wheelchair accesibility)
+            if any([i.get("odpt:isNonStepBus") == False for i in trip["odpt:busTimetableObject"]]):
+                wheelchair = "2"
+
+            elif any([i.get("odpt:isNonStepBus") == True for i in trip["odpt:busTimetableObject"]]):
+                wheelchair = "1"
+
+            else:
+                wheelchair = "0"
+
             # Do we start after midnight?
             prev_departure = _Time(0)
             if trip["odpt:busTimetableObject"][0].get("odpt:isMidnight", False):
                 first_time = trip["odpt:busTimetableObject"][0].get("odpt:departureTime") or \
-                trip["odpt:busTimetableObject"][0].get("odpt:arrivalTime")
+                             trip["odpt:busTimetableObject"][0].get("odpt:arrivalTime")
                 # If that's a night bus, and the trip starts before 6 AM
                 # Add 24h to departure, as the trip starts "after-midnight"
                 if int(first_time.split(":")[0]) < 6: prev_departure = _Time(86400)
 
-            # Failter stops to include only active stops
+            # Filter stops to include only active stops
             trip["odpt:busTimetableObject"] = sorted([
-                i for i in trip["odpt:busTimetableObject"]
-                if i["odpt:busstopPole"].split(":")[1] in self.valid_stops
+                    i for i in trip["odpt:busTimetableObject"]
+                    if i["odpt:busstopPole"].split(":")[1] in self.valid_stops
                 ], key=lambda i: i["odpt:index"])
 
             # Ignore trips with less then 1 stop
@@ -386,7 +402,7 @@ class BusesParser:
             writer_trips.writerow({
                 "route_id": route_id, "trip_id": trip_id,
                 "service_id": service_id, "trip_headsign": trip_headsign,
-                "trip_pattern_id": pattern_id
+                "trip_pattern_id": pattern_id, "wheelchair_accessible": wheelchair
             })
 
             # Times
@@ -408,9 +424,15 @@ class BusesParser:
                 if departure < arrival: departure += 86400
                 prev_departure = copy(departure)
 
+                # Can get on/off?
+                # None → no info → fallbacks to True, but bool(None) == False, so we have to explicitly comapre the value to False
+                pickup = "1" if stop_time.get("odpt:CanGetOn") == False else "0"
+                dropoff = "1" if stop_time.get("odpt:CanGetOff") == False else "0"
+
                 writer_times.writerow({
                     "trip_id": trip_id, "stop_sequence": idx, "stop_id": stop_id,
-                    "arrival_time": str(arrival), "departure_time": str(departure)
+                    "arrival_time": str(arrival), "departure_time": str(departure),
+                    "pickup_type": pickup, "drop_off_type": dropoff
                 })
 
         trips.close()
@@ -538,7 +560,7 @@ class BusesParser:
 if __name__ == "__main__":
     args_parser = argparse.ArgumentParser()
     args_parser.add_argument("-a", "--apikey", metavar="YOUR_APIKEY", help="apikey from developer-tokyochallenge.odpt.org")
-    args_parser.add_argument("-v", "--verbose", action="store_true", help="use ANSI escape codes to verbose *a lot*")
+    args_parser.add_argument("--no-verbose", action="store_false", dest="verbose", help="don't verbose")
     args = args_parser.parse_args()
 
     if args.apikey:
