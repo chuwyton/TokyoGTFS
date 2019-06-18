@@ -459,7 +459,7 @@ class BusesParser:
         calendar_dates = {}
         for calendar in calendars:
             calendar_id = calendar["owl:sameAs"].split(":")[1]
-            if "odpt:day" in calendar:
+            if "odpt:day" in calendar and calendar["odpt:day"] != []:
                 dates = [datetime.strptime(i, "%Y-%m-%d").date() for i in calendar["odpt:day"]]
                 dates = [i for i in dates if self.startdate <= i <= self.enddate]
                 for date in dates:
@@ -481,6 +481,7 @@ class BusesParser:
             working_date = copy(self.startdate)
             while working_date <= self.enddate:
                 active_services = []
+
                 if calendar_dates.get(working_date, set()).intersection(services):
                     active_services = [i for i in calendar_dates[working_date].intersection(services)]
 
@@ -523,6 +524,72 @@ class BusesParser:
         calendars.close()
         buffer.close()
 
+    def trips_calendars_crosscheck(self):
+        # Sometimes BusTimetable references the "Holiday" service, which is »valid«,
+        # But sometimes specific calendars override every holiday inside the GTFS peroid
+        # This functions checks if service_id of every trips is inside calendar_dates.txt
+
+        valid_services = set()
+        remove_trips = set()
+
+        # Read valid services
+        if self.verbose: print("\033[1A\033[KTrips×Calendars cross-check: reading calendar_dates.txt")
+
+        buff = open("gtfs/calendar_dates.txt", "r", encoding="utf8")
+        reader = csv.DictReader(buff)
+        for row in reader:
+            valid_services.add(row["service_id"])
+        buff.close()
+
+        ### FIX TRIPS.TXT ###
+        if self.verbose: print("\033[1A\033[KTrips×Calendars cross-check: rewriting trips.txt")
+        os.rename("gtfs/trips.txt", "gtfs/trips.txt.old")
+
+        # Old file
+        in_buffer = open("gtfs/trips.txt.old", mode="r", encoding="utf8", newline="")
+        reader = csv.DictReader(in_buffer)
+
+        # New file
+        out_buffer = open("gtfs/trips.txt", mode="w", encoding="utf8", newline="")
+        writer = csv.DictWriter(out_buffer, GTFS_HEADERS["trips.txt"], extrasaction="ignore")
+        writer.writeheader()
+
+        for row in reader:
+            if row["service_id"] in valid_services:
+                writer.writerow(row)
+            else:
+                remove_trips.add(row["trip_id"])
+
+        in_buffer.close()
+        out_buffer.close()
+
+        os.remove("gtfs/trips.txt.old")
+        del valid_services
+
+        ### FIX STOP_TIMES.TXT ###
+        if self.verbose: print("\033[1A\033[KTrips×Calendars cross-check: rewriting stop_times.txt")
+        os.rename("gtfs/stop_times.txt", "gtfs/stop_times.txt.old")
+
+        # Old file
+        in_buffer = open("gtfs/stop_times.txt.old", mode="r", encoding="utf8", newline="")
+        reader = csv.DictReader(in_buffer)
+
+        # New file
+        out_buffer = open("gtfs/stop_times.txt", mode="w", encoding="utf8", newline="")
+        writer = csv.DictWriter(out_buffer, GTFS_HEADERS["stop_times.txt"], extrasaction="ignore")
+        writer.writeheader()
+
+        for row in reader:
+            if row["trip_id"] in remove_trips:
+                continue
+            else:
+                writer.writerow(row)
+
+        in_buffer.close()
+        out_buffer.close()
+
+        os.remove("gtfs/stop_times.txt.old")
+
     def parse(self):
         if self.verbose: print("Parsing agencies")
         self.agencies()
@@ -546,6 +613,10 @@ class BusesParser:
         if self.verbose: print("\033[1A\033[KParsing calendars")
         self.calendars()
         if self.verbose: print("\033[1A\033[KParsing calendars: finished")
+
+        if self.verbose: print("\033[1A\033[KTrips×Calendars cross-check")
+        self.trips_calendars_crosscheck()
+        if self.verbose: print("\033[1A\033[KTrips×Calendars cross-check: finished")
 
         if self.verbose: print("\033[1A\033[KParsing finished!")
 
