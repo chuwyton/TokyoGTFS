@@ -1,20 +1,20 @@
 "operator","route_id","route_code","route_name","route_en_name","route_color","route_type","train_timetable_available"
-"TokyoMetro","TokyoMetro.Chiyoda","C","千代田線","Chiyoda Line","00a650",2,1
-"TokyoMetro","TokyoMetro.Fukutoshin","F","副都心線","Fukutoshin Line","ba6831",2,1
-"TokyoMetro","TokyoMetro.Ginza","G","銀座線","Ginza Line","f7931d",2,1
-"TokyoMetro","TokyoMetro.Hanzomon","Z","半蔵門線","Hanzōmon Line","937cb9",2,1
-"TokyoMetro","TokyoMetro.Hibiya","H","日比谷線","Hibiya Line","8ba2ae",2,1
-"TokyoMetro","TokyoMetro.Marunouchi","M","丸ノ内線","Marunouchi Line","ed1c24",2,1
-"TokyoMetro","TokyoMetro.MarunouchiBranch","Mb","丸ノ内線分岐線","Marunouchi Branch Line","ed1c24",2,1
-"TokyoMetro","TokyoMetro.Namboku","N","南北線","Namboku Line","00b5ad",2,1
-"TokyoMetro","TokyoMetro.Tozai","T","東西線","Tōzai Line","00b2dd",2,1
-"TokyoMetro","TokyoMetro.Yurakucho","Y","有楽町線","Yūrakuchō Line","bb8b38",2,1
-"Toei","Toei.Asakusa","A","浅草線","Asakusa Line","ef5ba1",2,1
-"Toei","Toei.Mita","I","三田線","Mita Line","0080c6",2,1
-"Toei","Toei.Oedo","E","大江戸線","Ōedo Line","b51e82",2,1
-"Toei","Toei.Shinjuku","S","新宿線","Shinjuku Line","6dc067",2,1
-"Toei","Toei.Arakawa","SA","東京さくらトラム","Tokyo Sakura Tram","ee86a7",0,1
-"Toei","Toei.NipporiToneri","NT","日暮里・舎人ライナー","Nippori-Toneri Liner","58b580",1,1
+"TokyoMetro","TokyoMetro.Chiyoda","C","千代田線","Chiyoda Line","00bb85",2,1
+"TokyoMetro","TokyoMetro.Fukutoshin","F","副都心線","Fukutoshin Line","9c5e31",2,1
+"TokyoMetro","TokyoMetro.Ginza","G","銀座線","Ginza Line","ff9500",2,1
+"TokyoMetro","TokyoMetro.Hanzomon","Z","半蔵門線","Hanzōmon Line","8f76d6",2,1
+"TokyoMetro","TokyoMetro.Hibiya","H","日比谷線","Hibiya Line","b5b5ac",2,1
+"TokyoMetro","TokyoMetro.Marunouchi","M","丸ノ内線","Marunouchi Line","f62e36",2,1
+"TokyoMetro","TokyoMetro.MarunouchiBranch","Mb","丸ノ内線分岐線","Marunouchi Branch Line","f62e36",2,1
+"TokyoMetro","TokyoMetro.Namboku","N","南北線","Namboku Line","00ac9b",2,1
+"TokyoMetro","TokyoMetro.Tozai","T","東西線","Tōzai Line","009bbf",2,1
+"TokyoMetro","TokyoMetro.Yurakucho","Y","有楽町線","Yūrakuchō Line","c1a470",2,1
+"Toei","Toei.Asakusa","A","浅草線","Asakusa Line","ef463c",2,1
+"Toei","Toei.Mita","I","三田線","Mita Line","0072bc",2,1
+"Toei","Toei.Oedo","E","大江戸線","Ōedo Line","ce1c64",2,1
+"Toei","Toei.Shinjuku","S","新宿線","Shinjuku Line","abba41",2,1
+"Toei","Toei.Arakawa","SA","東京さくらトラム","Tokyo Sakura Tram","d04172",0,1
+"Toei","Toei.NipporiToneri","NT","日暮里・舎人ライナー","Nippori-Toneri Liner","85ca58",1,1
 "JR-East","JR-East.ChuoRapid","JC","中央線快速","Chūō Rapid Line","fe642e",2,1
 "JR-East","JR-East.ChuoSobuLocal","JB","中央・総武緩行線","Chūō-Sōbu Line","ffd700",2,1
 "JR-East","JR-East.Hachiko",,"八高線","Hachikō Line","9acd32",2,1
