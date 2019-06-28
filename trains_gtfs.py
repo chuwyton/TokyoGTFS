@@ -22,13 +22,7 @@ __author__ = "Mikołaj Kuranowski"
 __email__ = "mikolaj@mkuran.pl"
 __license__ = "CC BY 4.0"
 
-ADDITIONAL_ENGLISH = {
-    "中荒井": "Nakaarai",
-    "各停": "Local", "特急連絡": "Connecting Limited Express",
-    "私鉄無料急行": "", "無料急行": "", "小田急通勤準急": "",
-    "私鉄無料特急": "Limited Express", "拝島ライナー": "Haijima Liner", "東武ＤＬ": "Tobu DL",
-    "Ｓ−ＴＲＡＩＮ": "S-Train", "シティライナー": "City Liner"
-}
+ADDITIONAL_ENGLISH = {}
 
 GTFS_HEADERS = {
     "agency.txt": ["agency_id", "agency_name", "agency_url", "agency_timezone", "agency_lang"],
@@ -41,8 +35,6 @@ GTFS_HEADERS = {
     #"fare_rules.txt": ["fare_id", "contains_id"],
     "translations.txt": ["trans_id", "lang", "translation"]
 }
-
-ADDITIONAL_ENGLISH = {}
 
 BUILT_IN_CALENDARS = {"Weekday", "SaturdayHoliday", "Holiday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 
