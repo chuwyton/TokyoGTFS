@@ -690,7 +690,7 @@ class TrainParser:
 
             # The purpose of odpt:viaStation is not very clear, but it is assumed to have no harmful effects to using it as a contains_id in fare_rules
             if "odpt:viaStation" in fare:
-                contains_id = fare["odpt:viaStation"].split(":")[1]
+                contains_id = fare["odpt:viaStation"][0].split(":")[1]
             else:
                 contains_id = ""
 
