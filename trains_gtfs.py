@@ -400,12 +400,13 @@ class TrainParser:
             stop_lat, stop_lon = position_fixer.get(stop_id, (stop.get("geo:lat"), stop.get("geo:long")))
 
             # Output to GTFS or to incorrect stops
+            # Zone id field is for fares
             if stop_lat and stop_lon:
                 self.valid_stops.add(stop_id)
                 self.station_positions[stop_id] = (float(stop_lat), float(stop_lon))
                 writer.writerow({
                     "stop_id": stop_id, "stop_code": stop_code, "stop_name": stop_name,
-                    "stop_lat": stop_lat, "stop_lon": stop_lon, "location_type": 0
+                    "stop_lat": stop_lat, "stop_lon": stop_lon, "zone_id": stop_id, "location_type": 0
                 })
 
             else:
