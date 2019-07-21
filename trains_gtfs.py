@@ -31,8 +31,8 @@ GTFS_HEADERS = {
     "trips.txt": ["route_id", "trip_id", "service_id", "trip_short_name", "trip_headsign", "direction_id", "direction_name", "block_id", "train_realtime_id"],
     "stop_times.txt": ["trip_id", "stop_sequence", "stop_id", "platform", "arrival_time", "departure_time"],
     "calendar_dates.txt": ["service_id", "date", "exception_type"],
-    #"fare_attributes.txt": ["agency_id", "fare_id", "price", "currency_type", "payment_method", "transfers"],
-    #"fare_rules.txt": ["fare_id", "contains_id"],
+    # "fare_attributes.txt": ["agency_id", "fare_id", "price", "currency_type", "payment_method", "transfers"],
+    # "fare_rules.txt": ["fare_id", "origin_id", "destination_id"],
     "translations.txt": ["trans_id", "lang", "translation"]
 }
 
