@@ -661,6 +661,53 @@ class TrainParser:
         buffer_trips.close()
         buffer_times.close()
 
+    def fares(self):
+        """Gets fares from odpt and converts it to gtfs. Each station has a unique zone; the fares are created by specifying fare for each station. Ticket fares are used. (No IC fare, no child fare)"""
+        buffer_attributes = open("gtfs/fare_attributes.txt", mode="w", encoding="utf8", newline="")
+        writer_attributes = csv.DictWriter(buffer_attributes, GTFS_HEADERS["fare_attributes.txt"], extrasaction="ignore")
+        writer_attributes.writeheader()
+
+        buffer_rules = open("gtfs/fare_rules.txt", mode="w", encoding="utf8", newline="")
+        writer_rules = csv.DictWriter(buffer_rules, GTFS_HEADERS["fare_rules.txt"], extrasaction="ignore")
+        writer_rules.writeheader()
+
+        # Get list of fares
+        fares_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:RailwayFare.json", params={"acl:consumerKey": self.apikey}, timeout=90, stream=True)
+        fares_req.raise_for_status()
+        fares = ijson.items(fares_req.raw, "item")
+
+        # Iterate over fares
+        for fare in fares:
+            origin_id = fare["odpt:fromStation"].split(":")[1]
+            destination_id = fare["odpt:toStation"].split(":")[1]
+            fare_id = f"!{origin_id}_to_{destination_id}"
+            fare_amt = fare["odpt:ticketFare"]
+
+            agency_id = origin_id.split(".")[0]
+            # As of 2019/07/21, none of these fares are inter-agency
+            # Exceptions to Total = Agency A + Agency B:
+            #    . Toei - TokyoMetro
+
+            # The purpose of odpt:viaStation is not very clear, but it is assumed to have no harmful effects to using it as a contains_id in fare_rules
+            if "odpt:viaStation" in fare:
+                contains_id = fare["odpt:viaStation"].split(":")[1]
+            else:
+                contains_id = ""
+
+            if self.verbose: print("\033[1A\033[KParsing fares:", fare_id)
+
+            writer_attributes.writerow({
+               "fare_id": fare_id, "price": fare_amt, "currency_type": "JPY", "payment_method": 1, "transfers": "", "agency_id": agency_id
+               })
+            writer_rules.writerow({
+                "fare_id": fare_id, "origin_id": origin_id, "destination_id": destination_id, "contains_id": contains_id})
+
+        fares_req.close()
+        buffer_attributes.close()
+        buffer_rules.close()
+
+
+
     def translations(self):
         buffer = open("gtfs/translations.txt", mode="w", encoding="utf8", newline="")
         writer = csv.DictWriter(buffer, GTFS_HEADERS["translations.txt"], extrasaction="ignore")
