@@ -928,6 +928,10 @@ class TrainParser:
         self.calendars()
         if self.verbose: print("\033[1A\033[KParsing calendars: finished")
 
+        if self.verbose: print("\033[1A\033[KParsing fares")
+        self.fares()
+        if self.verbose: print("\033[1A\033[KParsing fares: finished")
+
         if self.verbose: print("\033[1A\033[KPost-processing stops")
         self.stops_postprocess()
 
