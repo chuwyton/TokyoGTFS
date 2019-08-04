@@ -123,6 +123,23 @@ def trip_generator(apikey):
         else:
             yield trip
 
+def station_timetable_generator(apikey):
+    st_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:StationTimetable.json", params={"acl:consumerKey": apikey},
+        timeout=90, stream=True)
+    st_req.raise_for_status()
+    station_timetables = ijson.items(st_req.raw, "item")
+    # parsed_timetables = set()
+
+    for timetable in station_timetables:
+        # There aren't any duplicate timetables, but just in case
+        # if timetable["owl:sameAs"] in parsed_timetables:
+        #     continue
+        #
+        # parsed_timetables.add(timetable["owl:sameAs"])
+
+        yield timetable
+
+
 class _Time:
     "Represent a time value"
     def __init__(self, seconds):
@@ -159,6 +176,10 @@ class TrainParser:
         self.apikey = apikey
         self.verbose = verbose
 
+        # Set true to infer trips from station timetables
+        # Warning: the trip timings are inferred and as such are not precise
+        self.infer_from_stations = True
+
         # Stations stuff
         self.valid_stops = set()
         self.station_names = {}
@@ -193,7 +214,9 @@ class TrainParser:
 
                 # Only save info on routes which will have timetables data available:
                 # Those in odpt:TrainTimetable or, if enabled, in ekikara
-                if not row["train_timetable_available"] == "1":
+                #   or if trying to parse train timetables using station
+                #   timetables
+                if not row["train_timetable_available"] == "1" and not self.infer_from_stations:
                     continue
 
                 # TODO: N'EX route creator
@@ -479,7 +502,7 @@ class TrainParser:
         writer_times = csv.DictWriter(buffer_times, GTFS_HEADERS["stop_times.txt"], extrasaction="ignore")
         writer_times.writeheader()
 
-        # Iteratr over trips
+        # Iterate over trips
         for trip in trips:
             route_id = trip["odpt:railway"].split(":")[1]
             trip_id = trip["owl:sameAs"].split(":")[1]
@@ -498,7 +521,7 @@ class TrainParser:
             if route_id not in self.used_calendars: self.used_calendars[route_id] = set()
             self.used_calendars[route_id].add(calendar)
 
-            # Destination staion
+            # Destination station
             if trip.get("odpt:destinationStation") not in ["", None]:
                 destination_stations = [self._stop_name(i.split(":")[1]) for i in trip["odpt:destinationStation"]]
 
@@ -663,7 +686,15 @@ class TrainParser:
         buffer_times.close()
 
     def fares(self):
-        """Gets fares from odpt and converts it to gtfs. Each station has a unique zone; the fares are created by specifying fare for each station. Ticket fares are used. (No IC fare, no child fare)"""
+        """Gets fares from odpt and converts it to gtfs. Each station has a
+        unique zone; the fares are created by specifying fare for each
+        station. Ticket fares are used. (No IC fare, no child fare)
+
+        Author: Chu Wy Ton
+        email: chuwyton@gmail.com
+
+        Tested this but doesn't seem to have an effect on OTP. Doesn't break it
+        but doesn't seem to work either."""
         buffer_attributes = open("gtfs/fare_attributes.txt", mode="w", encoding="utf8", newline="")
         writer_attributes = csv.DictWriter(buffer_attributes, GTFS_HEADERS["fare_attributes.txt"], extrasaction="ignore")
         writer_attributes.writeheader()
@@ -794,6 +825,436 @@ class TrainParser:
         calendars_req.close()
         buffer.close()
 
+    def infer_trips_from_stops(self):
+        """
+        Infers the train timetable by attempting to build one from
+        station departure times in station timetables, if there are any.
+
+        This should be called before stops_postprocess.
+        """
+
+        superverbose = True
+
+        if superverbose: print("Reading stops and trips...")
+        # Read stations
+        # stop_ids = set()
+        # buffer = open("gtfs/stops.txt", mode="r", encoding="utf8", newline="")
+        # reader = csv.DictReader(buffer)
+        # for row in reader:
+        #     stop_ids.add(row["stop_id"])
+        # buffer.close()
+
+        # Read trips
+        trip_route_ids = set()
+        buffer = open("gtfs/trips.txt", mode="r", encoding="utf8", newline="")
+        reader = csv.DictReader(buffer)
+        prev_id = ""
+        for row in reader:
+            if prev_id != row["route_id"]:
+                trip_route_ids.add(row["route_id"])
+            prev_id = row["route_id"]
+        buffer.close()
+
+        # Get all station timetables
+        station_timetables = set()
+        prev_rwy = ""
+        for st in station_timetable_generator(self.apikey):
+            if prev_rwy != st["odpt:railway"]:
+                station_timetables.add(st["odpt:railway"].split(":")[1])
+            prev_rwy = st["odpt:railway"]
+
+        if superverbose: print("Finished reading stops and trips")
+
+        # Checked 03/08/2019: all timetables have odpt:railway value
+        check_railway = False
+        if check_railway:
+            for st in station_timetables:
+                if not ("odpt:railway" in st and st["odpt:railway"] != ""):
+                    print(f"Was not able to parse {st['owl:sameAs']}: Railway empty \n")
+
+            # Remove
+            station_timetables = [st for st in station_timetables if "odpt:railway" in st and st["odpt:railway"] != ""]
+
+        # Open buffers for writing
+        buffer_trips = open("gtfs/addional_trips.txt", mode="w", encoding="utf8", newline="")
+        writer_trips = csv.DictWriter(buffer_trips, GTFS_HEADERS["trips.txt"], extrasaction="ignore")
+        writer_trips.writeheader()
+
+        buffer_times = open("gtfs/additional_stop_times.txt", mode="w", encoding="utf8", newline="")
+        writer_times = csv.DictWriter(buffer_times, GTFS_HEADERS["stop_times.txt"], extrasaction="ignore")
+        writer_times.writeheader()
+
+        # Iterate by railways
+        # Take also the difference from trip_route_ids so none of the railways
+        # which already have been done are looked at
+        railways_in_timetable = station_timetables.difference(trip_route_ids)
+
+
+        for rit in railways_in_timetable:
+            if superverbose: print(f"Requesting railway {rit}")
+
+            # Get station order
+            railway_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:Railway", params={"acl:consumerKey": self.apikey, "owl:sameAs": "odpt.Railway:" + rit}, timeout=10)
+            railway_req.raise_for_status()
+            railway = []
+            try:
+                for item in ijson.items(railway_req.raw, "item"):
+                    railway.append(item)
+            except:
+                # Unable to parse raw: perhaps has to do with it having only one element? Parse via text instead
+                railway = json.loads(railway_req.text)
+
+            if not railway:
+                print(f"Was not able to find railway in ODPT for {rit}.")
+                continue
+
+            railway = railway[0]
+            station_order = railway["odpt:stationOrder"]
+            station_order.sort(key=lambda so: so["odpt:index"])
+            station_order = [so["odpt:station"] for so in station_order]
+
+            # TODO: Check that the stations exist
+
+            # Get relevant timetables
+            r_station_timetables = [st for st in station_timetables if st["odpt:railway"].split(":")[1] == rit]
+            if not r_station_timetables:
+                print(f"No station timetables in {rit}.")
+                continue
+
+            # Two directions
+            # Check that there are directions for every station timetable
+            if not all("odpt:railDirection" in rst for rst in r_station_timetables):
+                print(f"Was not able to get railDirection for all station timetables in {rit}. Skipping \n")
+                continue
+
+            # Check that there are two directions
+            directions = set([rst["odpt:railDirection"] for rst in r_station_timetables])
+            if len(directions) > 2:
+                print(f"There are more than 2 directions for station timetables in {rit}. Skipping \n")
+                continue
+
+            elif len(directions) < 2:
+                print(f"There are less than 2 directions for station timetables in {rit}. Not skipping \n")
+
+            # Craft a list of trips for each direction
+            #   and each calendar
+            for c in set([rst["odpt:calendar"] for rst in r_station_timetables]):
+                print(f"\033[1A\033[KParsing {rit}: {c}")
+
+                crst = [rst for rst in r_station_timetables if rst["odpt:calendar"] == c]
+                if not crst:
+                    print(f"There are no timetables for calendar {c} \n")
+                    continue
+
+                # (railways)|(calendars)|
+                # trips (list of dicts)
+                # //dir (odpt.railDirection, str)
+                # //trips (list of dicts)
+                # ////type (odpt.trainType, str)
+                # ////trips (list of dicts)
+                # //////route_id (odpt:railway, str)
+                # //////trip_id (<odpt:railway>.<idn>.<calendar>, str)
+                # //////service_id (<odpt:railway>/<calendar>, str)
+                # //////trip_short_name (<idn>)
+                # //////trip_headsign (odpt:stationTitle, str) [destination]
+                # //////direction_id (0 or 1, int)
+                # //////direction_name (odpt.railDirection, str)
+                # //////block_id (not exactly sure yet, leave empty for now)
+                # //////train_realtime_id (<odpt:railway>.<idn>)
+                # //////destinations (List(<odpt:station>)) >>>del<<<
+                # //////finished (bool) >>>del<<<
+                # //////times (list of dicts) >>>del<<<
+                # ////////trip_id (parent.trip_id, str)
+                # ////////stop_sequence (i, int)
+                # ////////stop_id (s, str)
+                # ////////platform  ("", str)
+                # ////////arrival_time (str(_Time))
+                # ////////departure_time (str(_Time))
+                #
+                # >>>del<<< marks deletion before writing to text file
+                trips = []
+
+                # Increase id every time a new trip is added
+                idn = 0
+
+                for idr, d in enumerate(directions):
+                    print(f"\033[1A\033[KParsing {rit}: {c}: {d}")
+
+                    drst = [rst for rst in crst if rst["odpt:railDirection"] == d]
+                    if not drst:
+                        print(f"There are no timetables for direction {d}, calendar {c} \n")
+                        continue
+
+                    dir_req = GET("https://api-tokyochallenge.odpt.org/api/v4/odpt:railDirection", params={"acl:consumerKey": self.apikey, "owl:sameAs": d}, timeout=10)
+                    dir_req.raise_for_status()
+                    direction = []
+                    try:
+                        for item in ijson.items(dir_req.raw, "item"):
+                            direction.append(item)
+                    except:
+                        # Unable to parse raw: perhaps has to do with it having only one element? Parse via text instead
+                        direction = json.loads(dir_req.text)
+
+                    direction = direction[0]
+                    direction_name = direction["dc:title"]
+
+                    trips.append({"dir": d, "trips": []})
+                    trips_dir = [tr for tr in trips if tr["dir"] == d][0]
+
+                    # Go through each station
+                    for i, s in enumerate(station_order):
+                        print(f"\033[1A\033[KParsing {rit}: {c}: {d}: {s}")
+
+                        srst = [rst for rst in drst if drst["odpt:station"] == s]
+                        if not srst:
+                            print(f"The timetable for {s} does not exist for {d}")
+                            continue;
+                        elif len(srst) > 1:
+                            print(f"Found multiple timetables for {s}, {d}")
+                            print("Taking only first")
+                            input("Press Enter to continue...")
+
+                        srst = srst[0]
+
+                        create_new_trip = False
+
+                        # TODO: Figuring out through-service:
+                        #   If a line has a destination that is off that line,
+                        #   it should be possible to infer that line, and store
+                        #   it in an "incomplete trips" list. This list should
+                        #   then be periodically checked.
+
+                        for st in srst["odpt:stationTimetableObject"]:
+                            if i > 0:
+                                t = st["odpt:trainType"]
+                                if not [tr for tr in trips_dir if tr["type"] == t]:
+                                    trips_dir.append({"type": t, "trips": []})
+                                    create_new_trip = True
+                                else:
+                                    trips_type = [tr for tr in trips_dir if tr["type"] == t][0]
+                                    departure = _Time.from_str(st["odpt:departureTime"])
+
+                                    # If over midnight, add a day
+                                    # Defined as 00:00 ~ 03:00
+                                    if departure < 3*3600:
+                                        departure += 86400
+
+                                    arrival = departure
+
+                                    # Find for the trip which has the closest last timing to departure BUT smaller than departure
+
+                                    # First take away the finished ones
+                                    possible_trips = [tr for tr in trips_type["trips"] if not tr["finished"]]
+
+                                    # Then take only those whose last recorded timing is earlier than the arrival time for this one
+                                    possible_trips = [tr for tr in possible_trips if _Time.from_str(tr["times"][-1]["departure_time"]) < arrival]
+
+                                    if not possible_trips:
+                                        # None found -- this is the starting station for a new trip
+                                        create_new_trip = True
+                                    else:
+                                        # There really should only be one
+                                        # If there are more take the first?
+                                        if len(possible_trips) > 1:
+                                            print(f"While going through {t} departing at {str(departure)}")
+                                            print(possible_trips)
+                                            print("more than 1 possible trips found; earliest will be taken")
+                                            input("Press Enter to continue...")
+
+                                        trip = possible_trips[0]
+
+                                        # Check if this is the last station
+                                        if s in trip["destinations"]:
+                                            trip["destinations"].remove(s)
+
+                                            if not trip["destinations"]:
+                                                trip["finished"] = True
+
+                                            else:
+                                                print("More than 1 destination; assume finished")
+                                                trip["finished"] = True
+
+                                        # trip_time elements
+                                        trip_id = trip["trip_id"]
+                                        stop_sequence = i
+                                        stop_id = s.split(":")[1]
+                                        platform = ""
+
+                                        # add the timing to trip_time
+                                        trip_time = {"trip_id": trip_id, "stop_sequence": stop_sequence, "stop_id": stop_id, "platform": platform, "arrival_time": str(arrival), "departure_time": str(departure)}
+
+                            else:
+                                # If this is the first station, assume everything starts at this station.
+                                create_new_trip = True
+
+                            if create_new_trip:
+                                # Just add to trips and trip times
+                                destination_stations = st["odpt:destinationStation"]
+                                destination_stations_ = []
+                                for ds in destination_stations:
+                                    ds_req = GET("https://api-tokyochallenge.odpt.org/api/v4/odpt:Station", params={"acl:consumerKey": self.apikey, "owl:sameAs": ds}, timeout=10)
+                                    ds_req.raise_for_status()
+                                    # This would be a good place to check if the station exists
+
+                                    destination_stations_.append(ijson.items(ds_req.raw, "item"))
+
+                                destination_station = "・".join(destination_stations_)
+
+                                # trip elements
+                                route_id = rit
+                                trip_id = f"{rit}.GTFS{idn:04}.{c.split(':')[1]}"
+                                service_id = f"{rit}/{c.split(':')[1]}"
+                                trip_short_name = f"GTFS{idn:04}"
+                                trip_headsign = destination_station
+                                direction_id = idr
+                                # direction_name = direction_name
+                                block_id = ""
+                                train_realtime_id = f"{rit}.GTFS{idn:04}"
+
+                                finished = False
+
+                                # trip_time elements
+                                stop_sequence = i
+                                stop_id = s.split(":")[1]
+                                platform = ""
+                                departure = _Time.from_str(st["odpt:departureTime"])
+                                arrival = departure
+
+                                trip_time = {"trip_id": trip_id, "stop_sequence": stop_sequence, "stop_id": stop_id, "platform": platform, "arrival_time": str(arrival), "departure_time": str(departure)}
+
+                                trip = {"route_id": route_id, "trip_id": trip_id, "service_id": service_id, "trip_short_name": trip_short_name, "trip_headsign": trip_headsign, "direction_id": direction_id, "direction_name": direction_name, "block_id": block_id, "train_realtime_id": train_realtime_id, "destinations": destination_stations, "finished": finished, "times": [trip_time]}
+
+                                trips_type = [tr for tr in trips_dir if tr["type"] == t][0]
+                                trips_type["trips"].append(trip)
+
+                    # reverse station_order so the next direction
+                    #   gets the reversed order
+                    station_order.reverse()
+
+                # For the last stations, average from first of the other direction
+                # Make sure the train type is correct!
+                averages = []
+                directions = [tr["dir"] for tr in trips]
+
+                # Assuming two directions
+                for idr, trip_dir in enumerate(trips):
+                    for trip_type in trip_dir["trips"]:
+                        for trip_t in trip_type["trips"]:
+                            if trip_t["finished"]:
+                                # Great, move on!
+                                continue
+
+                            # If not, look in averages for the "gap"
+                            last = station_order[0 if idr else -1]
+                            curr = f"odpt.Station:{trip_t['times'][-1]['stop_id']}"
+
+                            avgs = [a for a in averages if a["from"] == curr and a["to"] == last and a["type"] == trip_type["type"]]
+                            if avgs:
+                                # This has been calculated before. Get the score
+                                avg = avgs[0]["score"]
+                                if avg == None:
+                                    # This has been calculated before but returned no results. Skip
+                                    print(f"Trip {trip_t['trip_id']} (first station {trip_t['times'][0]['stop_id']}) failed to parse last leg.")
+                                else:
+                                    # trip_time elements
+                                    trip_id = trip_t["trip_id"]
+                                    stop_sequence = 0 if idr else len(station_order) - 1
+                                    stop_id = last.split(":")[1]
+                                    platform = ""
+                                    departure = trip_t["times"][-1]["departure_time"]
+                                    departure = _Time.from_str(departure) + avg
+                                    arrival = departure
+
+                                    trip_time = {"trip_id": trip_id, "stop_sequence": stop_sequence, "stop_id": stop_id, "platform": platform, "arrival_time": str(arrival), "departure_time": str(departure)}
+
+                                    trip_t["times"].append(trip_time)
+
+                                    # Check if this is the last station
+                                    if last in trip["destinations"]:
+                                        trip_t["destinations"].remove(last)
+
+                                        if not trip_t["destinations"]:
+                                            trip_t["finished"] = True
+
+                                        else:
+                                            print("More than 1 destination; assume finished")
+                                            trip_t["finished"] = True
+                            else:
+                                # This has not been calculated before. Attempt to calculate by going through first two stations in other direction
+
+                                trip_dir_ = trips[not i]
+                                trip_type_ = [tr for tr in trip_dir_["trips"] if tr["type"] == trip_type["type"]][0]
+                                trips_ = [tr for tr in trip_type_["trips"] if tr["times"][0]["stop_id"] == last.split(":")[1] and tr["times"][1]["stop_id"] == curr.split(":")[1]]
+
+                                if trips_:
+                                    # Get the departure/arrival times for each station
+                                    fr = map(lambda tr: tr["times"][0]["departure_time"], trips_)
+                                    to = map(lambda tr: tr["times"][1]["arrival_time"], trips_)
+
+                                    fr = map(_Time.from_str, fr)
+                                    to = map(_Time.from_str, to)
+
+                                    # Get their differences
+                                    diffs = map(lambda x,y: y-x, fr, to)
+
+                                    # Average them out
+                                    avg = sum(diffs)/len(diffs)
+                                    avg = round(avg/60)*60
+
+                                    # Add to trip_t's times
+                                    # trip_time elements
+                                    trip_id = trip_t["trip_id"]
+                                    stop_sequence = 0 if idr else len(station_order) - 1
+                                    stop_id = last.split(":")[1]
+                                    platform = ""
+                                    departure = trip_t["times"][-1]["departure_time"]
+                                    departure = _Time.from_str(departure) + avg
+                                    arrival = departure
+
+                                    trip_time = {"trip_id": trip_id, "stop_sequence": stop_sequence, "stop_id": stop_id, "platform": platform, "arrival_time": str(arrival), "departure_time": str(departure)}
+
+                                    trip_t["times"].append(trip_time)
+
+                                    # Check if this is the last station
+                                    if last in trip_t["destinations"]:
+                                        trip_t["destinations"].remove(last)
+
+                                        if not trip_t["destinations"]:
+                                            trip_t["finished"] = True
+
+                                        else:
+                                            print("More than 1 destination; assume finished")
+                                            trip_t["finished"] = True
+
+                                    # Add average to dict of averages
+                                    averages.append({"from": curr, "to": last, "type": trip_type["type"], "score": avg})
+
+                                else:
+                                    # Was not able to find trips satisfying the from/to criteria. Take note.
+                                    print(f"Trip {trip_t['trip_id']} (first station {trip_t['times'][0]['stop_id']}) failed to parse last leg.")
+                                    averages.append({"from": curr, "to": last, "type": trip_type["type"], "score": None})
+                # write everything
+                incomplete = 0
+                for trip_dir in trips:
+                    for trip_type in trip_dir["trips"]:
+                        for trip in trip_type["trips"]:
+                            for trip_times in trip["times"]:
+                                writer_times.writerow(trip_times)
+
+                            del trip["times"]
+                            del trip["destinations"]
+                            del trip["finished"]
+
+                            writer_trips.writerow(trip)
+
+                print(f"incomplete: {incomplete}")
+
+        # Everything is done, close railway request
+        railway_req.close()
+
+        buffer_trips.close()
+        buffer_times.close()
+
     def stops_postprocess(self):
         stops = OrderedDict()
         names = {}
@@ -922,6 +1383,11 @@ class TrainParser:
         if self.verbose: print("\033[1A\033[KParsing times")
         self.trips()
         if self.verbose: print("\033[1A\033[KParsing times: finished")
+
+        if self.infer_from_stations:
+            if self.verbose: print("\033[1A\033[KParsing trips from station timetables:")
+            self.infer_trips_from_stops()
+            if self.verbose: print("\033[1A\033[KParsing trips from station timetables: finished")
 
         if self.verbose: print("\033[1A\033[KParsing translations")
         self.translations()
