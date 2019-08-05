@@ -856,12 +856,9 @@ class TrainParser:
         buffer.close()
 
         # Get all station timetables
-        station_timetables = set()
-        prev_rwy = ""
+        station_timetables = []
         for st in station_timetable_generator(self.apikey):
-            if prev_rwy != st["odpt:railway"]:
-                station_timetables.add(st["odpt:railway"].split(":")[1])
-            prev_rwy = st["odpt:railway"]
+            station_timetables.append(st)
 
         if superverbose: print("Finished reading stops and trips")
 
@@ -887,7 +884,7 @@ class TrainParser:
         # Iterate by railways
         # Take also the difference from trip_route_ids so none of the railways
         # which already have been done are looked at
-        railways_in_timetable = station_timetables.difference(trip_route_ids)
+        railways_in_timetable = set([s["odpt:railway"] for s in station_timetables]).difference(trip_route_ids)
 
 
         for rit in railways_in_timetable:
@@ -896,16 +893,17 @@ class TrainParser:
             # Get station order
             railway_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:Railway", params={"acl:consumerKey": self.apikey, "owl:sameAs": "odpt.Railway:" + rit}, timeout=10)
             railway_req.raise_for_status()
-            railway = []
-            try:
-                for item in ijson.items(railway_req.raw, "item"):
-                    railway.append(item)
-            except:
-                # Unable to parse raw: perhaps has to do with it having only one element? Parse via text instead
-                railway = json.loads(railway_req.text)
+            # railway = []
+            # try:
+            #     for item in ijson.items(railway_req.raw, "item"):
+            #         railway.append(item)
+            # except:
+            # Unable to parse raw: perhaps has to do with it having only one element? Parse via text instead
+            railway = json.loads(railway_req.text)
 
             if not railway:
                 print(f"Was not able to find railway in ODPT for {rit}.")
+                print(railway)
                 continue
 
             railway = railway[0]
