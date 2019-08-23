@@ -1,3 +1,4 @@
+# coding=utf-8
 from datetime import datetime, date, timedelta
 from collections import OrderedDict
 from bs4 import BeautifulSoup
@@ -886,12 +887,13 @@ class TrainParser:
         # which already have been done are looked at
         railways_in_timetable = set([s["odpt:railway"] for s in station_timetables]).difference(trip_route_ids)
 
-
         for rit in railways_in_timetable:
             if superverbose: print(f"Requesting railway {rit}")
 
             # Get station order
-            railway_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:Railway", params={"acl:consumerKey": self.apikey, "owl:sameAs": "odpt.Railway:" + rit}, timeout=10)
+            railway_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:Railway",
+                                       params={"acl:consumerKey": self.apikey, "owl:sameAs": rit},
+                                       timeout=10)
             railway_req.raise_for_status()
             # railway = []
             # try:
@@ -914,7 +916,7 @@ class TrainParser:
             # TODO: Check that the stations exist
 
             # Get relevant timetables
-            r_station_timetables = [st for st in station_timetables if st["odpt:railway"].split(":")[1] == rit]
+            r_station_timetables = [st for st in station_timetables if st["odpt:railway"] == rit]
             if not r_station_timetables:
                 print(f"No station timetables in {rit}.")
                 continue
@@ -983,7 +985,7 @@ class TrainParser:
                         print(f"There are no timetables for direction {d}, calendar {c} \n")
                         continue
 
-                    dir_req = GET("https://api-tokyochallenge.odpt.org/api/v4/odpt:railDirection", params={"acl:consumerKey": self.apikey, "owl:sameAs": d}, timeout=10)
+                    dir_req = requests.get("https://api-tokyochallenge.odpt.org/api/v4/odpt:railDirection", params={"acl:consumerKey": self.apikey, "owl:sameAs": d}, timeout=10)
                     dir_req.raise_for_status()
                     direction = []
                     try:
