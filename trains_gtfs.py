@@ -350,8 +350,8 @@ class TrainParser:
             file_wrtr = csv.writer(file_buff)
             file_wrtr.writerow(["feed_publisher_name", "feed_publisher_url", "feed_lang"])
             file_wrtr.writerow([
-                "Mikołaj Kuranowski (via TokyoGTFS); Data provided by Open Data Challenge for Public Transportation in Tokyo",
-                "https://github.com/MKuranowski/TokyoGTFS",
+                '"Mikołaj Kuranowski (via TokyoGTFS); Data provided by Open Data Challenge for Public Transportation in Tokyo"',
+                '"https://github.com/MKuranowski/TokyoGTFS"',
                 "ja"
             ])
 
