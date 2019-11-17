@@ -601,7 +601,8 @@ class TrainParser:
                 trip_headsign = destination_station
                 trip_headsign_en = destination_station_en
 
-                trip_type, trip_type_en = train_types.get(trip.get("odpt:trainType", ""), ("", ""))
+                trip_type_id = trip.get("odpt:trainType", ":").split(":")[1]
+                trip_type, trip_type_en = train_types.get(trip_type_id, ("", ""))
 
                 if trip_type:
                     trip_headsign = "（{}）{}".format(trip_type, destination_station)
@@ -611,7 +612,7 @@ class TrainParser:
                         trip_headsign_en = None
 
             if trip_headsign_en is not None:
-                self.english_strings[trip_headsign_en] = trip_headsign_en
+                self.english_strings[trip_headsign] = trip_headsign_en
 
             # TODO: N'EX route creator
             #tofrom_narita_airport = lambda i: "odpt.Station:JR-East.NaritaAirportBranch.NaritaAirportTerminal1" in i.get("odpt:originStation", []) or \
