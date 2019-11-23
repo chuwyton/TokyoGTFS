@@ -1,3 +1,6 @@
+try: import ijson.backends.yajl2_c as ijson
+except: import ijson
+
 from datetime import datetime, date, timedelta, timezone
 from collections import OrderedDict
 from bs4 import BeautifulSoup
@@ -9,7 +12,6 @@ import requests
 import zipfile
 import iso8601
 import shutil
-import ijson
 import json
 import math
 import time
