@@ -828,7 +828,7 @@ class TrainParser:
         train_types = self._train_types()
         train_directions = self._train_directions()
         available_calendars = self._legal_calendars()
-        main_direction = ""
+        main_direction = {}
 
         # Get all trips
         trips = trip_generator(self.apikey)
@@ -906,9 +906,10 @@ class TrainParser:
                     )
 
             elif "odpt:railDirection" in trip:
-                if not main_direction: main_direction = trip["odpt:railDirection"]
+                if route_id not in main_direction:
+                    main_direction[route_id] = trip["odpt:railDirection"]
                 direction_name = train_directions.get(trip["odpt:railDirection"], "")
-                direction_id = 0 if trip["odpt:railDirection"] == main_direction else 1
+                direction_id = 0 if trip["odpt:railDirection"] == main_direction[route_id] else 1
 
             else:
                 direction_id, direction_name == "", ""
