@@ -1,4 +1,4 @@
-try: import ijson.backends.yajl2_cffi as ijson
+try: import ijson.backends.yajl2_c as ijson
 except: import ijson
 
 from datetime import datetime, date, timedelta
@@ -35,7 +35,7 @@ GTFS_HEADERS = {
     "translations.txt": ["trans_id", "lang", "translation"]
 }
 
-BUILT_IN_CALENDARS = {"Weekday", "SaturdayHoliday", "Holiday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
+BUILT_IN_CALENDARS = {"Weekday", "SaturdayHoliday", "Holiday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Everyday"}
 
 def _text_color(route_color: str):
     """Calculate if route_text_color should be white or black"""
@@ -113,9 +113,9 @@ class BusesParser:
         self.used_calendars = OrderedDict()
 
     def _legal_calendars(self):
-        calendars = requests.get("http://api-tokyochallenge.odpt.org/api/v4/odpt:Calendar.json", params={"acl:consumerKey": self.apikey}, timeout=30, stream=True)
-        calendars.raise_for_status()
-        calendars = ijson.items(calendars.raw, "item")
+        calendars_req = requests.get("http://api-tokyochallenge.odpt.org/api/v4/odpt:Calendar.json", params={"acl:consumerKey": self.apikey}, timeout=30, stream=True)
+        calendars_req.raise_for_status()
+        calendars = ijson.items(calendars_req.raw, "item")
 
         valid_calendars = set()
         for calendar in calendars:
@@ -132,7 +132,7 @@ class BusesParser:
             else:
                 warn("\033[1mno dates defined for calendar {}\033[0m".format(calendar_id))
 
-        calendars.close()
+        calendars_req.close()
         return valid_calendars
 
     def agencies(self):
@@ -176,9 +176,9 @@ class BusesParser:
     def stops(self):
         """Parse stops"""
         # Get list of stops
-        stops = requests.get("http://api-tokyochallenge.odpt.org/api/v4/odpt:BusstopPole.json", params={"acl:consumerKey": self.apikey}, timeout=30, stream=True)
-        stops.raise_for_status()
-        stops = ijson.items(stops.raw, "item")
+        stops_req = requests.get("http://api-tokyochallenge.odpt.org/api/v4/odpt:BusstopPole.json", params={"acl:consumerKey": self.apikey}, timeout=30, stream=True)
+        stops_req.raise_for_status()
+        stops = ijson.items(stops_req.raw, "item")
 
         # Open files
         buffer = open("gtfs/stops.txt", mode="w", encoding="utf8", newline="")
@@ -229,13 +229,13 @@ class BusesParser:
             else:
                 broken_stops_wrtr.writerow([stop_id, stop_name, stop_name_en, stop_code])
 
-        stops.close()
+        stops_req.close()
         buffer.close()
 
     def routes(self):
-        patterns = requests.get("http://api-tokyochallenge.odpt.org/api/v4/odpt:BusroutePattern.json", params={"acl:consumerKey": self.apikey}, timeout=30, stream=True)
-        patterns.raise_for_status()
-        patterns = ijson.items(patterns.raw, "item")
+        patterns_req = requests.get("http://api-tokyochallenge.odpt.org/api/v4/odpt:BusroutePattern.json", params={"acl:consumerKey": self.apikey}, timeout=30, stream=True)
+        patterns_req.raise_for_status()
+        patterns = ijson.items(patterns_req.raw, "item")
 
         buffer = open("gtfs/routes.txt", mode="w", encoding="utf8", newline="")
         writer = csv.DictWriter(buffer, GTFS_HEADERS["routes.txt"], extrasaction="ignore")
@@ -284,7 +284,7 @@ class BusesParser:
                     "route_text_color": route_text
                 })
 
-        patterns.close()
+        patterns_req.close()
         buffer.close()
 
     def trips(self):
@@ -293,9 +293,9 @@ class BusesParser:
         available_calendars = self._legal_calendars()
 
         # Get all trips
-        trips = requests.get("http://api-tokyochallenge.odpt.org/api/v4/odpt:BusTimetable.json", params={"acl:consumerKey": self.apikey}, timeout=90, stream=True)
-        trips.raise_for_status()
-        trips = ijson.items(trips.raw, "item")
+        trips_req = requests.get("http://api-tokyochallenge.odpt.org/api/v4/odpt:BusTimetable.json", params={"acl:consumerKey": self.apikey}, timeout=90, stream=True)
+        trips_req.raise_for_status()
+        trips = ijson.items(trips_req.raw, "item")
 
         # Open GTFS trips
         buffer_trips = open("gtfs/trips.txt", mode="w", encoding="utf8", newline="")
@@ -435,7 +435,7 @@ class BusesParser:
                     "pickup_type": pickup, "drop_off_type": dropoff
                 })
 
-        trips.close()
+        trips_req.close()
         buffer_trips.close()
         buffer_times.close()
 
@@ -451,9 +451,9 @@ class BusesParser:
         buffer.close()
 
     def calendars(self):
-        calendars = requests.get("http://api-tokyochallenge.odpt.org/api/v4/odpt:Calendar.json", params={"acl:consumerKey": self.apikey}, timeout=30, stream=True)
-        calendars.raise_for_status()
-        calendars = ijson.items(calendars.raw, "item")
+        calendars_req = requests.get("http://api-tokyochallenge.odpt.org/api/v4/odpt:Calendar.json", params={"acl:consumerKey": self.apikey}, timeout=30, stream=True)
+        calendars_req.raise_for_status()
+        calendars = ijson.items(calendars_req.raw, "item")
 
         # Get info on specific calendars
         calendar_dates = {}
@@ -516,12 +516,15 @@ class BusesParser:
                 elif working_date.isoweekday() <= 5 and working_date not in holidays and "Weekday" in services:
                     active_services = ["Weekday"]
 
+                elif "Everyday" in services:
+                    active_services = ["Everyday"]
+
                 if active_services:
                     for service in active_services:
                         writer.writerow({"service_id": route+"/"+service, "date": working_date.strftime("%Y%m%d"), "exception_type": 1})
                 working_date += timedelta(days=1)
 
-        calendars.close()
+        calendars_req.close()
         buffer.close()
 
     def trips_calendars_crosscheck(self):
