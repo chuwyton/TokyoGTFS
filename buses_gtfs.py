@@ -21,7 +21,7 @@ import os
 __title__ = "TokyoGTFS: Buses-GTFS"
 __author__ = "Mikołaj Kuranowski"
 __email__ = "mikolaj@mkuran.pl"
-__license__ = "CC BY 4.0"
+__license__ = "MIT"
 
 GTFS_HEADERS = {
     "agency.txt": ["agency_id", "agency_name", "agency_url", "agency_timezone", "agency_lang"],

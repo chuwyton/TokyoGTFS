@@ -14,7 +14,7 @@ import os
 __title__ = "TokyoGTFS: Trains-Realtime"
 __author__ = "Mikołaj Kuranowski"
 __email__ = "mikolaj@mkuran.pl"
-__license__ = "CC BY 4.0"
+__license__ = "MIT"
 
 EFFECTS = {
     "運転見合わせ": 1, "運転被約": 2, "遅延": 3, "運行情報あり": 6, "お知らせ": 6, "直通運転中止": 1
