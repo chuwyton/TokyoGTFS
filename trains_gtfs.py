@@ -21,7 +21,7 @@ import os
 __title__ = "TokyoGTFS: Trains-GTFS"
 __author__ = "Mikołaj Kuranowski"
 __email__ = "mikolaj@mkuran.pl"
-__license__ = "CC BY 4.0"
+__license__ = "MIT"
 
 ADDITIONAL_ENGLISH = {}
 

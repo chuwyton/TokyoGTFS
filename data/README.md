@@ -11,10 +11,4 @@ ABOUT FILES
 LICENSING OF FILES IN THIS DIRECTORY
 ------------------------------------
 
-All files in this directory are shared under the [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) license, included in the file *license.md*.
-
-Data in those files may be used as long as you give an appropiate contribution, by providing:
-- Author's name: Mikołaj Kuranowski,
-- Link to TokyoGTFS project: https://github.com/MKuranowski/TokyoGTFS,
-- Link to CC BY 4.0 license: https://creativecommons.org/licenses/by/4.0/,
-- List of changes made to the original data (if any).
+All files in this directory are shared under the [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) license, included in the file *license.md*.
