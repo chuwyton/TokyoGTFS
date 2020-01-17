@@ -45,6 +45,8 @@ JR-East,JR-East.Takasaki,JU,高崎線,Takasaki Line,ffa500,2,1
 JR-East,JR-East.Togane,,東金線,Tōgane Line,ff8c00,2,1
 JR-East,JR-East.Tokaido,JT,東海道線,Tōkaidō Line,ffa500,2,1
 JR-East,JR-East.Tsurumi,JI,鶴見線,Tsurumi Line,ffd700,2,1
+JR-East,JR-East.TsurumiOkawaBranch,JI,鶴見線大川支線,Tsurumi Line Ōkawa Branch,ffd700,2,1
+JR-East,JR-East.TsurumiUmiShibauraBranch,JI,鶴見線海芝浦支線,Tsurumi Line Umi-Shibaura Branch,ffd700,2,1
 JR-East,JR-East.Uchibo,,内房線,Uchibō Line,00bf00,2,1
 JR-East,JR-East.Utsunomiya,JU,宇都宮線,Utsunomiya Line,ffa500,2,1
 JR-East,JR-East.Yamanote,JY,山手線,Yamanote Line,9acd32,2,1
@@ -108,6 +110,7 @@ Keisei,Keisei.Chiba,KS,京成千葉線,Keisei Chiba Line,005aaa,2,0
 Keisei,Keisei.Chihara,KS,京成千原線,Keisei Chihara Line,005aaa,2,0
 Keisei,Keisei.HigashiNarita,KS,京成東成田線,Keisei Higashi-Narita Line,005aaa,2,0
 Keisei,Keisei.Oshiage,KS,京成押上線,Keisei Oshiage Line,005aaa,2,0
+Keisei,Keisei.Skyliner,KS,京成スカイライナー,Keisei Skyliner,262882,2,0
 TWR,TWR.Rinkai,R,りんかい線,Rinkai Line,00418e,2,1
 Yurikamome,Yurikamome.Yurikamome,U,ゆりかもめ,Yurikamome,0085cd,1,0
 YokohamaMunicipal,YokohamaMunicipal.Green,G,グリーンライン,Green Line,0b8460,2,1
