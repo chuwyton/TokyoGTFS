@@ -94,9 +94,6 @@ def trip_generator(apikey):
     parsed_trips = set()
 
     for trip in odpt_trips:
-        prev_trips = trip.get("odpt:previousTrainTimetable", [])
-        next_trips = trip.get("odpt:nextTrainTimetable", [])
-
         # Check if trip has not expired
         if "dct:valid" in trip:
             valid_until = iso8601.parse_date(trip["dct:valid"])
@@ -235,17 +232,18 @@ class TrainParser:
     def _train_headsigns(self, train_types, route_id, trip, destination_stations, direction_name):
         destination_station = "・".join(destination_stations)
         destination_station_en = " / ".join([self._english(i) for i in destination_stations])
+        trip_id = trip["owl:sameAs"].split(":")[1]
 
         if route_id == "JR-East.Yamanote":
             # Special case - JR-East.Yamanote line
             # Here, we include the direction_name, as it's important to users
-            if direction_name == "内回り" and trip.get("odpt:nextTrainTimetable", []) in [[], None]:
-                trip_headsign = "内回り・{}".format(destination_station)
-                trip_headsign_en = "Inner Loop ⟲: {}".format(destination_station_en)
+            if direction_name == "内回り" and not trip.get("odpt:nextTrainTimetable"):
+                trip_headsign = f"（内回り）{destination_station}"
+                trip_headsign_en = f"(Inner Loop ⟲) {destination_station_en}"
 
-            if direction_name == "外回り" and trip.get("odpt:nextTrainTimetable", []) in [[], None]:
-                trip_headsign = "外回り・{}".format(destination_station)
-                trip_headsign_en = "Outer Loop ⟳: {}".format(destination_station_en)
+            if direction_name == "外回り" and not trip.get("odpt:nextTrainTimetable"):
+                trip_headsign = f"（外回り）{destination_station}"
+                trip_headsign_en = f"(Outer Loop ⟳) {destination_station_en}"
 
             elif direction_name == "内回り":
                 trip_headsign = "内回り"
@@ -372,13 +370,12 @@ class TrainParser:
 
     def feed_info(self):
         with open(os.path.join("gtfs", "feed_info.txt"), mode="w", encoding="utf8", newline="") as file_buff:
-            file_wrtr = csv.writer(file_buff)
-            file_wrtr.writerow(["feed_publisher_name", "feed_publisher_url", "feed_lang"])
-            file_wrtr.writerow([
+            file_buff.write(",".join(["feed_publisher_name", "feed_publisher_url", "feed_lang"]) + "\n")
+            file_buff.write(",".join([
                 '"Mikołaj Kuranowski (via TokyoGTFS); Data provided by Open Data Challenge for Public Transportation in Tokyo"',
                 '"https://github.com/MKuranowski/TokyoGTFS"',
                 "ja"
-            ])
+            ]) + "\n")
 
     def stops(self):
         """Parse stops"""
