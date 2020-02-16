@@ -1,0 +1,2 @@
+class DataAssertion(ValueError):
+    pass
