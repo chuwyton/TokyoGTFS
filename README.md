@@ -3,7 +3,7 @@ TokyoGTFS
 
 
 
-Descrpition
+Description
 -----------
 
 Make GTFS and GTFS-Realtime feeds for Tokyo from data provided by [Open Data Challenge for Public Transportation in Tokyo](https://tokyochallenge.odpt.org/).
@@ -15,6 +15,7 @@ Precautions
 Before using this script you're going to have to get an apikey for Open Data Challenge.
 You can do this at the [ODPT website](https://tokyochallenge.odpt.org/en/index.html#entry).
 
++++ API Key can be found here: https://developer-tokyochallenge.odpt.org/oauth/applications?locale=en +++
 Then put this apikey in a file called `apikey.txt` where python scripts are provided, or provide it as command line arguments for the script, like `python3 <script_name>.py -a YOUR-APIKEY`.
 
 
