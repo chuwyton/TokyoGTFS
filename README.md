@@ -1,7 +1,17 @@
 TokyoGTFS
 ==========
 
+UPDATING TOKYO GTFS R2R PACKAGE
+----------
 
+- Pull the latest `Data.Gtfs.Raw` package
+- If this package does not exist, you can create it by making a directory in rome2rio-core called `Data.Gtfs.Raw` and running `r2r pull /n:Data.Gtfs.Raw` within this directory from CLI
+- Run `trains_gtfs.py` and `buses_gtfs.py` as described below
+- Copy the output `trains.zip` and `buses.zip` to the `Data.Gtfs.Raw` package in rome2rio-core repo
+- Run the command `r2r pack`
+- Run the command `r2r push`
+- Run the command `r2r release /r:[path to rome2rio-core directory]` (eg. `r2r release /r:c:\src\rome2rio-core`)
+- Push the commit this command creates and create a PR
 
 Description
 -----------
