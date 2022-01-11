@@ -5,3 +5,4 @@ beautifulsoup4
 pykakasi
 iso8601
 gtfs-realtime-bindings >= 0.0.5
+pytz
