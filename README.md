@@ -28,6 +28,7 @@ You can do this at the [ODPT website](https://tokyochallenge.odpt.org/en/index.h
 +++ API Key can be found here: https://developer-tokyochallenge.odpt.org/oauth/applications?locale=en +++
 Then put this apikey in a file called `apikey.txt` where python scripts are provided, or provide it as command line arguments for the script, like `python3 <script_name>.py -a YOUR-APIKEY`.
 
++++ This Key can also be found in LastPass, under "Tokyo GTFS Key" in Shared-Content Tools
 
 
 Running
