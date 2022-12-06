@@ -9,7 +9,7 @@ from src.const import HEADER
 if __name__ == "__main__":
     args_parser = argparse.ArgumentParser()
     args_parser.add_argument("-a", "--apikey", metavar="YOUR_APIKEY", 
-                             help="apikey from developer-tokyochallenge.odpt.org")
+                             help="apikey from api.odpt.org")
     args = args_parser.parse_args()
 
     # Apikey checks

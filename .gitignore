@@ -1,5 +1,6 @@
 # Tokyo GTFS
 gtfs/*
+output/*
 temp/*
 ekikara/*
 ignore*

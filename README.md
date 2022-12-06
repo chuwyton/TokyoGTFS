@@ -8,19 +8,34 @@ UPDATING TOKYO GTFS R2R PACKAGE
 - Add the output `trains.zip` and `buses.zip` to the [GTFS Feed Manager](https://content.rome2rio.com/gtfs-feed-manager) to `jp.tokyo.buses` and `jp.tokyo.trains` respectively and save each one
 - Wait until the GTFS Scraper & Transit Builder next run, and then these new files will be added to the product
 
+Docker build process
+-----------
+* Build the container image first
+  * `docker build -t r2r/tokyogtfs:latest .`
+* Then run the container with the command line args and set the api key. The API key can be found in 1password or you will need to sign up here [Public Transportation Open Data Centre](https://www.odpt.org/en/)
+  * Double check the mounted directory matches the fulle path to the output folder that you want. It is the left hand side of the `-v` arg up to the colon `:`
+  * `docker run -v C:\src\TokyoGTFS\output:/app/output --name tokyogtfs r2r/tokyogtfs:latest run_gtfs.py -a YOUR-APIKEY`
+* Check the output folder `output` for the zip files to upload to agency manager
+
+Approximate time for completion as of 2022-12-06:
+* trains - 80 seconds
+* busses - 12 minutes
+
+
+Original ReadMe
+-----------
+
 Description
 -----------
 
-Make GTFS and GTFS-Realtime feeds for Tokyo from data provided by [Open Data Challenge for Public Transportation in Tokyo](https://tokyochallenge.odpt.org/).
-
-
+Make GTFS and GTFS-Realtime feeds for Tokyo from data provided by [Public Transportation Open Data Centre](https://www.odpt.org/en/).
 
 Precautions
 -----------
 Before using this script you're going to have to get an apikey for Open Data Challenge.
 You can do this at the [ODPT website](https://tokyochallenge.odpt.org/en/index.html#entry).
 
-+++ API Key can be found here: https://developer-tokyochallenge.odpt.org/oauth/applications?locale=en +++
++++ API Key can be found here: https://api.odpt.org/oauth/applications?locale=en +++
 Then put this apikey in a file called `apikey.txt` where python scripts are provided, or provide it as command line arguments for the script, like `python3 <script_name>.py -a YOUR-APIKEY`.
 
 +++ This Key can also be found in LastPass, under "Tokyo GTFS Key" in Shared-Content Tools
@@ -59,8 +74,8 @@ Windows users may need to run `py -m pip ...` instead of `pip3 ...` and `py ...`
 
 Attributions
 ------------
-Use created data according to [API Use Guidelines](https://developer-tokyochallenge.odpt.org/en/terms/api_guideline.html),
-[API Use Permission Rules](https://developer-tokyochallenge.odpt.org/en/terms/terms_api_usage.html).
+Use created data according to [API Use Guidelines](https://api.odpt.org/en/terms/api_guideline.html),
+[API Use Permission Rules](https://api.odpt.org/en/terms/terms_api_usage.html).
 
 The source of data used for GTFS-creating scripts is the Open Data Challenge for Public Transportation in Tokyo.
 They are based on the data provided by the public transportation operators.

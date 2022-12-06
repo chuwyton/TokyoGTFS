@@ -3,6 +3,7 @@ import time
 import sys
 import os
 
+from src.static_buses import BusParser
 from src.static_trains import TrainParser
 from src.const import HEADER
 
@@ -29,10 +30,21 @@ if __name__ == "__main__":
 
     start_time = time.time()
     print(HEADER)
-    print("=== Trains GTFS: Starting! ===")
+    print("=== Trains GTFS ===")
 
     print("Warming up")
     TrainParser.parse(apikey)
 
     total_time = time.time() - start_time
-    print("=== TokyoGTFS: Finished in {} s ===".format(round(total_time, 2)))
+    print("=== Trains GTFS: Finished in {} s ===".format(round(total_time, 2)))
+
+
+    start_time = time.time()
+    print(HEADER)
+    print("=== Buses GTFS ===")
+
+    print("Warming up")
+    BusParser.parse(apikey)
+
+    total_time = time.time() - start_time
+    print("=== Buses GTFS: Finished in {} s ===".format(round(total_time, 2)))

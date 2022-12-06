@@ -84,6 +84,7 @@ def compress(target_file):
     :type target_file: str or file-like or path-like
     """
 
+    target_file = "output/" + target_file
     print_log(f"Compressing to {target_file}")
 
     with zipfile.ZipFile(target_file, mode="w", compression=zipfile.ZIP_DEFLATED) as arch:

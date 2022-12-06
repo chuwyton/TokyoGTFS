@@ -118,7 +118,7 @@ class ApiHandler:
         print_log(f"Requesting data dump for {endpoint}")
 
         req = self.session.get(
-            f"https://api-tokyochallenge.odpt.org/api/v4/odpt:{endpoint}",
+            f"https://api.odpt.org/api/v4/odpt:{endpoint}",
             params={"acl:consumerKey": self.apikey}, timeout=GET_TIMEOUT,
             stream=True,
         )

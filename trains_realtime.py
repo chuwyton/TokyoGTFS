@@ -11,7 +11,7 @@ if __name__ == "__main__":
 
     args_parser.add_argument(
         "-a", "--apikey", metavar="YOUR-APIKEY",
-        help="apikey from developer-tokyochallenge.odpt.org"
+        help="apikey from api.odpt.org"
     )
 
     args_parser.add_argument(
