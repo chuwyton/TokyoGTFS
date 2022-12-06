@@ -15,7 +15,7 @@ Docker build process
 * Then run the container with the command line args and set the api key. The API key can be found in 1password or you will need to sign up here [Public Transportation Open Data Centre](https://www.odpt.org/en/)
   * Double check the mounted directory matches the fulle path to the output folder that you want. It is the left hand side of the `-v` arg up to the colon `:`
   * `docker run -v C:\src\TokyoGTFS\output:/app/output --name tokyogtfs r2r/tokyogtfs:latest run_gtfs.py -a YOUR-APIKEY`
-* Check the output folder `output` for the zip files to upload to agency manager
+* Check the output folder `output` for the zip files and add them to the JIRA ticket for a content user to perform the upload and testing
 
 Approximate time for completion as of 2022-12-06:
 * trains - 80 seconds
